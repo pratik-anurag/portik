@@ -1,4 +1,4 @@
-# portik
+# portik(port i know)
 
 **portik** is a developer-friendly CLI to inspect, explain, and manage port ownership.
 
