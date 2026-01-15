@@ -7,13 +7,26 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"portik/internal/history"
 )
 
 func renderUI(m modelTUI) string {
 	var b strings.Builder
+	width := clamp(m.width, 40, 140)
 
-	header := fmt.Sprintf("portik TUI  proto=%s  interval=%s", m.opts.Proto, m.opts.Interval)
+	styles := tuiStyles(width)
+
+	modeLabel := "who"
+	if m.mode == viewExplain {
+		modeLabel = "explain"
+	}
+	last := "-"
+	if !m.lastRefresh.IsZero() {
+		last = m.lastRefresh.Format("15:04:05")
+	}
+	header := fmt.Sprintf("portik TUI  mode=%s  proto=%s  interval=%s  last=%s", modeLabel, m.opts.Proto, m.opts.Interval, last)
 	if m.opts.Docker {
 		header += "  docker=on"
 	} else {
@@ -25,18 +38,21 @@ func renderUI(m modelTUI) string {
 		header += "  actions=off (run with --actions)"
 	}
 
-	b.WriteString(header)
+	b.WriteString(styles.header.Width(width).Render(header))
 	b.WriteString("\n")
 
 	if m.filtering {
-		b.WriteString(fmt.Sprintf("Filter: %s▌  (Enter to apply, Esc to clear)\n", m.filter))
+		b.WriteString(styles.filter.Render(fmt.Sprintf("Filter: %s▌  (Enter to apply, Esc to clear)", m.filter)))
+		b.WriteString("\n")
 	} else if strings.TrimSpace(m.filter) != "" {
-		b.WriteString(fmt.Sprintf("Filter: %s  (press Esc to clear, / to edit)\n", m.filter))
+		b.WriteString(styles.filter.Render(fmt.Sprintf("Filter: %s  (Esc to clear, / to edit)", m.filter)))
+		b.WriteString("\n")
 	} else {
-		b.WriteString("Filter: (press / to search)\n")
+		b.WriteString(styles.filter.Render("Filter: (press / to search)"))
+		b.WriteString("\n")
 	}
 
-	b.WriteString(strings.Repeat("─", clamp(m.width, 40, 140)))
+	b.WriteString(styles.rule.Render(strings.Repeat("─", width)))
 	b.WriteString("\n")
 
 	rows := m.filteredRows()
@@ -53,8 +69,9 @@ func renderUI(m modelTUI) string {
 		sel = len(rows) - 1
 	}
 
-	b.WriteString("PORT   OWNER                    PID     ADDR                  DOCKER            Δ  SPARK\n")
-	b.WriteString(strings.Repeat("─", clamp(m.width, 40, 140)))
+	b.WriteString(styles.tableHeader.Render("PORT   OWNER                    PID     ADDR                  DOCKER            Δ  SPARK"))
+	b.WriteString("\n")
+	b.WriteString(styles.rule.Render(strings.Repeat("─", width)))
 	b.WriteString("\n")
 
 	for i, r := range rows {
@@ -64,16 +81,19 @@ func renderUI(m modelTUI) string {
 		}
 		changed := " "
 		if r.Changed && !r.LastChange.IsZero() && time.Since(r.LastChange) < 5*time.Second {
-			changed = "*"
+			changed = styles.changed.Render("*")
 		}
 		owner := trunc(r.Owner, 23)
 		addr := trunc(r.Addr, 20)
 		dk := trunc(r.Docker, 16)
 		spark := trunc(r.Spark, 12)
 		if r.Err != "" {
-			owner = trunc("ERR: "+r.Err, 23)
+			owner = styles.err.Render(trunc("ERR: "+r.Err, 23))
 		}
-		b.WriteString(fmt.Sprintf("%s%-5s %-23s %-7s %-20s %-16s %s  %-12s\n",
+		if strings.TrimSpace(dk) != "" {
+			dk = styles.docker.Render(dk)
+		}
+		line := fmt.Sprintf("%s%-5s %-23s %-7s %-20s %-16s %s  %-12s",
 			prefix,
 			fmt.Sprintf("%d", r.Port),
 			owner,
@@ -82,11 +102,16 @@ func renderUI(m modelTUI) string {
 			dk,
 			changed,
 			spark,
-		))
+		)
+		if i == sel {
+			line = styles.selected.Render(line)
+		}
+		b.WriteString(line)
+		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")
-	b.WriteString(strings.Repeat("─", clamp(m.width, 40, 140)))
+	b.WriteString(styles.rule.Render(strings.Repeat("─", width)))
 	b.WriteString("\n")
 
 	row := rows[sel]
@@ -95,32 +120,90 @@ func renderUI(m modelTUI) string {
 	if m.mode == viewExplain {
 		title = "Explain"
 	}
-	b.WriteString(fmt.Sprintf("%s (Tab toggle, w=who, e=explain)\n", title))
+	b.WriteString(styles.section.Render(fmt.Sprintf("%s (Tab toggle, w=who, e=explain)", title)))
+	b.WriteString("\n")
 	b.WriteString(truncLines(detailsForRow(row, m.mode), 18))
 	b.WriteString("\n")
 
-	b.WriteString(strings.Repeat("─", clamp(m.width, 40, 140)))
+	b.WriteString(styles.rule.Render(strings.Repeat("─", width)))
 	b.WriteString("\n")
-	b.WriteString("History (last 20)\n")
+	b.WriteString(styles.section.Render("History (last 20)"))
+	b.WriteString("\n")
 	b.WriteString(renderHistoryLast20(m, row.Port))
 	b.WriteString("\n")
 
 	if m.confirming {
 		b.WriteString("\n")
-		b.WriteString(strings.Repeat("─", clamp(m.width, 40, 140)))
+		b.WriteString(styles.rule.Render(strings.Repeat("─", width)))
 		b.WriteString("\n")
-		b.WriteString("CONFIRM: " + m.confirmMsg + "\n")
+		b.WriteString(styles.confirm.Render("CONFIRM: " + m.confirmMsg))
+		b.WriteString("\n")
 	} else {
 		b.WriteString("\n")
-		b.WriteString("Status: " + m.status + "\n")
-		b.WriteString("Keys: ↑/↓ select, Tab toggle who/explain, r refresh, / filter, Esc clear, q quit")
-		if m.opts.Actions {
-			b.WriteString(", K kill, R restart")
-		}
+		b.WriteString(styles.status.Width(width).Render("Status: " + m.status))
 		b.WriteString("\n")
+		if m.showHelp {
+			b.WriteString(styles.help.Render(helpText(m)))
+			b.WriteString("\n")
+		} else {
+			keys := "Keys: ↑/↓ select, Tab toggle, r refresh, / filter, Esc clear, q quit, ? help"
+			if m.opts.Actions {
+				keys += ", K kill, R restart"
+			}
+			b.WriteString(styles.keys.Render(keys))
+			b.WriteString("\n")
+		}
 	}
 
 	return b.String()
+}
+
+type tuiStyleSet struct {
+	header      lipgloss.Style
+	filter      lipgloss.Style
+	rule        lipgloss.Style
+	tableHeader lipgloss.Style
+	selected    lipgloss.Style
+	changed     lipgloss.Style
+	err         lipgloss.Style
+	docker      lipgloss.Style
+	section     lipgloss.Style
+	confirm     lipgloss.Style
+	status      lipgloss.Style
+	keys        lipgloss.Style
+	help        lipgloss.Style
+}
+
+func tuiStyles(width int) tuiStyleSet {
+	return tuiStyleSet{
+		header:      lipgloss.NewStyle().Background(lipgloss.Color("#1F6F8B")).Foreground(lipgloss.Color("#F8F4E3")).Padding(0, 1),
+		filter:      lipgloss.NewStyle().Foreground(lipgloss.Color("#A7F3D0")),
+		rule:        lipgloss.NewStyle().Foreground(lipgloss.Color("#2DD4BF")),
+		tableHeader: lipgloss.NewStyle().Foreground(lipgloss.Color("#F59E0B")).Bold(true),
+		selected:    lipgloss.NewStyle().Background(lipgloss.Color("#1D4ED8")).Foreground(lipgloss.Color("#F8FAFC")),
+		changed:     lipgloss.NewStyle().Foreground(lipgloss.Color("#F97316")).Bold(true),
+		err:         lipgloss.NewStyle().Foreground(lipgloss.Color("#EF4444")).Bold(true),
+		docker:      lipgloss.NewStyle().Foreground(lipgloss.Color("#22D3EE")).Bold(true),
+		section:     lipgloss.NewStyle().Foreground(lipgloss.Color("#93C5FD")).Bold(true),
+		confirm:     lipgloss.NewStyle().Background(lipgloss.Color("#7C2D12")).Foreground(lipgloss.Color("#FEF3C7")).Padding(0, 1),
+		status:      lipgloss.NewStyle().Background(lipgloss.Color("#111827")).Foreground(lipgloss.Color("#F9FAFB")).Padding(0, 1).Width(width),
+		keys:        lipgloss.NewStyle().Foreground(lipgloss.Color("#94A3B8")),
+		help:        lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("#22C55E")).Foreground(lipgloss.Color("#DCFCE7")).Padding(1, 2).Width(width - 2),
+	}
+}
+
+func helpText(m modelTUI) string {
+	lines := []string{
+		"Navigation: ↑/↓ (or j/k), Tab toggle, w who, e explain",
+		"Refresh: r, Filter: / then type, Esc clear",
+		"View: ? toggle help, q quit",
+	}
+	if m.opts.Actions {
+		lines = append(lines, "Actions: K kill, R restart (confirm with y/Enter, cancel with n/Esc)")
+	} else {
+		lines = append(lines, "Actions: disabled (run with --actions)")
+	}
+	return "Help\n" + strings.Join(lines, "\n")
 }
 
 func renderHistoryLast20(m modelTUI, port int) string {

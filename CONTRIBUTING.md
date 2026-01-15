@@ -12,3 +12,13 @@ Thanks for contributing to **portik**.
 ```bash
 go test ./...
 go run ./cmd/portik --help
+```
+
+## How to report bugs
+
+Please open a GitHub issue with:
+- Your OS and architecture
+- The exact command you ran
+- The full output (or a minimal repro if it's large)
+- Whether you ran with elevated privileges (sudo/admin)
+- Any relevant environment details (container/WSL, Docker, etc.)

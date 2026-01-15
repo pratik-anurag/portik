@@ -9,10 +9,14 @@ import (
 )
 
 type commonFlags struct {
-	Proto  string
-	Docker bool
-	JSON   bool
-	Yes    bool
+	Proto   string
+	Docker  bool
+	JSON    bool
+	Yes     bool
+	Summary bool
+	Verbose bool
+	NoHints bool
+	Color   string
 }
 
 func parseCommon(fs *flag.FlagSet) *commonFlags {
@@ -21,6 +25,10 @@ func parseCommon(fs *flag.FlagSet) *commonFlags {
 	fs.BoolVar(&c.Docker, "docker", false, "enable docker mapping")
 	fs.BoolVar(&c.JSON, "json", false, "output JSON (if available)")
 	fs.BoolVar(&c.Yes, "yes", false, "skip confirmation prompts")
+	fs.BoolVar(&c.Summary, "summary", false, "short output (where supported)")
+	fs.BoolVar(&c.Verbose, "verbose", false, "verbose output (where supported)")
+	fs.BoolVar(&c.NoHints, "no-hints", false, "suppress diagnostic hints (where supported)")
+	fs.StringVar(&c.Color, "color", "auto", "color: auto|always|never")
 	return c
 }
 

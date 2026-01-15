@@ -42,6 +42,6 @@ func runExplain(args []string) int {
 		return 0
 	}
 
-	fmt.Print(render.Explain(rep))
+	fmt.Print(render.Explain(rep, renderOptions(c)))
 	return 0
 }

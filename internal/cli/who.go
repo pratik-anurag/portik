@@ -42,6 +42,6 @@ func runWho(args []string) int {
 		return 0
 	}
 
-	fmt.Print(render.Who(rep))
+	fmt.Print(render.Who(rep, renderOptions(c)))
 	return 0
 }

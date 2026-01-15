@@ -9,22 +9,55 @@ import (
 	"portik/internal/sys"
 )
 
-func Who(rep model.Report) string {
+type Options struct {
+	Color   bool
+	Summary bool
+	Verbose bool
+	NoHints bool
+}
+
+func Who(rep model.Report, opt Options) string {
+	opt = normalizeOptions(opt)
 	var b strings.Builder
-	fmt.Fprintf(&b, "Port %d/%s\n", rep.Port, rep.Proto)
+	fmt.Fprintf(&b, "%s %d/%s\n", label("Port", opt), rep.Port, rep.Proto)
 
 	if len(rep.Listeners) == 0 {
 		b.WriteString("  (no listeners found)\n")
 	} else {
-		for _, l := range rep.Listeners {
-			fmt.Fprintf(&b, "%-7s %-24s pid=%d  user=%s  %-12s %s\n",
-				l.State,
-				fmt.Sprintf("%s:%d", fmtIP(l.LocalIP), l.LocalPort),
-				l.PID,
-				dash(l.User),
-				dash(l.ProcName),
-				dash(l.Cmdline),
-			)
+		if opt.Summary {
+			l, ok := rep.PrimaryListener()
+			if ok {
+				fmt.Fprintf(&b, "%-7s %-24s pid=%d  user=%s  %-12s\n",
+					stateLabel(l.State, opt),
+					fmt.Sprintf("%s:%d", fmtIP(l.LocalIP), l.LocalPort),
+					l.PID,
+					dash(l.User),
+					dash(l.ProcName),
+				)
+			}
+		} else {
+			for _, l := range rep.Listeners {
+				fmt.Fprintf(&b, "%-7s %-24s pid=%d  user=%s  %-12s %s\n",
+					stateLabel(l.State, opt),
+					fmt.Sprintf("%s:%d", fmtIP(l.LocalIP), l.LocalPort),
+					l.PID,
+					dash(l.User),
+					dash(l.ProcName),
+					dash(l.Cmdline),
+				)
+			}
+		}
+		if !opt.Summary {
+			maxDepth := 4
+			if opt.Verbose {
+				maxDepth = 6
+			}
+			if l, ok := rep.PrimaryListener(); ok && l.PID > 0 {
+				chain, _ := proctree.Build(l.PID, maxDepth)
+				if len(chain) > 1 {
+					fmt.Fprintf(&b, "\nOwner chain (best-effort): %s\n", fmtProcChain(chain, maxDepth))
+				}
+			}
 		}
 	}
 
@@ -40,27 +73,50 @@ func Who(rep model.Report) string {
 	return b.String()
 }
 
-func Explain(rep model.Report) string {
+func Explain(rep model.Report, opt Options) string {
+	opt = normalizeOptions(opt)
 	var b strings.Builder
-	b.WriteString(Who(rep))
+	b.WriteString(Who(rep, opt))
+
+	if opt.NoHints {
+		return b.String()
+	}
 
 	b.WriteString("\nSummary\n")
 	if len(rep.Diagnostics) == 0 {
 		b.WriteString("- No hints available\n")
 	} else {
 		for _, d := range rep.Diagnostics {
-			fmt.Fprintf(&b, "- [%s] %s\n", strings.ToUpper(d.Severity), d.Summary)
+			fmt.Fprintf(&b, "- %s %s\n", severityLabel(d.Severity, opt), d.Summary)
 		}
 	}
 
-	b.WriteString("\nDetails\n")
-	for _, d := range rep.Diagnostics {
-		fmt.Fprintf(&b, "• %s\n", d.Summary)
-		if d.Details != "" {
-			fmt.Fprintf(&b, "  %s\n", d.Details)
+	if opt.Summary {
+		return b.String()
+	}
+
+	sections := groupDiagnostics(rep.Diagnostics)
+	if len(sections) > 0 {
+		b.WriteString("\nLikely causes\n")
+		for _, s := range sections {
+			if len(s.Items) == 0 {
+				continue
+			}
+			fmt.Fprintf(&b, "\n%s\n", sectionTitle(s.Title, opt))
+			for _, d := range s.Items {
+				fmt.Fprintf(&b, "• %s\n", d.Summary)
+				if d.Details != "" {
+					fmt.Fprintf(&b, "  %s\n", d.Details)
+				}
+			}
 		}
-		if d.Action != "" {
-			fmt.Fprintf(&b, "  → %s\n", d.Action)
+	}
+
+	actions := dedupeActions(rep.Diagnostics)
+	if len(actions) > 0 {
+		b.WriteString("\nNext actions\n")
+		for _, a := range actions {
+			fmt.Fprintf(&b, "- %s\n", a)
 		}
 	}
 	return b.String()
@@ -117,3 +173,135 @@ func dash(s string) string {
 	}
 	return s
 }
+
+func fmtProcChain(chain []proctree.Proc, max int) string {
+	if len(chain) == 0 {
+		return "-"
+	}
+	if max <= 0 || max > len(chain) {
+		max = len(chain)
+	}
+	var parts []string
+	for i := 0; i < max; i++ {
+		p := chain[i]
+		name := dash(p.Name)
+		if name == "-" {
+			name = "?"
+		}
+		parts = append(parts, fmt.Sprintf("%s(%d)", name, p.PID))
+	}
+	if max < len(chain) {
+		parts = append(parts, "...")
+	}
+	return strings.Join(parts, " <- ")
+}
+
+type diagSection struct {
+	Title string
+	Items []model.Diagnostic
+}
+
+func groupDiagnostics(in []model.Diagnostic) []diagSection {
+	ordered := []string{"Port & process", "Network & reachability", "Environment", "Other"}
+	buckets := map[string][]model.Diagnostic{}
+	for _, d := range in {
+		buckets[diagCategory(d.Kind)] = append(buckets[diagCategory(d.Kind)], d)
+	}
+	var out []diagSection
+	for _, title := range ordered {
+		if len(buckets[title]) == 0 {
+			continue
+		}
+		out = append(out, diagSection{Title: title, Items: buckets[title]})
+	}
+	return out
+}
+
+func diagCategory(kind string) string {
+	switch kind {
+	case "permission", "in-use", "time-wait", "zombie", "pid-missing", "multi-listener":
+		return "Port & process"
+	case "ipv6-only", "loopback-only", "firewall":
+		return "Network & reachability"
+	case "docker", "env", "vm":
+		return "Environment"
+	default:
+		return "Other"
+	}
+}
+
+func dedupeActions(in []model.Diagnostic) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, d := range in {
+		if strings.TrimSpace(d.Action) == "" {
+			continue
+		}
+		if seen[d.Action] {
+			continue
+		}
+		seen[d.Action] = true
+		out = append(out, d.Action)
+	}
+	return out
+}
+
+func normalizeOptions(opt Options) Options {
+	if opt.Verbose && opt.Summary {
+		opt.Summary = false
+	}
+	return opt
+}
+
+func label(s string, opt Options) string {
+	if !opt.Color {
+		return s
+	}
+	return ansiBold + s + ansiReset
+}
+
+func stateLabel(state string, opt Options) string {
+	if !opt.Color {
+		return state
+	}
+	switch strings.ToUpper(state) {
+	case "LISTEN":
+		return ansiGreen + state + ansiReset
+	case "BOUND":
+		return ansiYellow + state + ansiReset
+	default:
+		return ansiBlue + state + ansiReset
+	}
+}
+
+func severityLabel(sev string, opt Options) string {
+	tag := strings.ToUpper(sev)
+	if !opt.Color {
+		return "[" + tag + "]"
+	}
+	switch sev {
+	case "warn":
+		return ansiYellow + "[" + tag + "]" + ansiReset
+	case "error":
+		return ansiRed + "[" + tag + "]" + ansiReset
+	default:
+		return ansiBlue + "[" + tag + "]" + ansiReset
+	}
+}
+
+func sectionTitle(s string, opt Options) string {
+	if !opt.Color {
+		return s
+	}
+	return ansiCyan + s + ansiReset
+}
+
+const (
+	ansiReset  = "\x1b[0m"
+	ansiBold   = "\x1b[1m"
+	ansiRed    = "\x1b[31m"
+	ansiGreen  = "\x1b[32m"
+	ansiYellow = "\x1b[33m"
+	ansiBlue   = "\x1b[34m"
+	ansiCyan   = "\x1b[36m"
+)

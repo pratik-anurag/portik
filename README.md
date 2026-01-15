@@ -14,6 +14,10 @@ Note: resolving sockets → PIDs can require elevated privileges on some systems
 
 ---
 
+## Project status
+
+portik is in active development and is currently **alpha**. Interfaces and output may change, especially JSON fields. The focus is on correct results over exhaustive platform coverage.
+
 ## Install
 
 ### Build from source
@@ -61,7 +65,7 @@ portik daemon --ports 5432,6379 --interval 30s --docker
 
 # blame / process tree ("who started this?")
 portik blame 5432 --docker
-
+```
 
 ## Scan / Free / Reserve
 
@@ -139,6 +143,18 @@ portik use --ports 3000-3999 --shell -- sh -lc 'echo "PORT=$PORT"; python -m htt
 
 #UDP mode
 portik use --proto udp --ports 40000-40100 --print
+
+# top clients to Postgres
+portik conn 5432 --top 10
+
+# only ESTABLISHED
+portik conn 5432 --state ESTABLISHED
+
+# wait until service starts
+portik wait 8080 --listening --timeout 60s
+
+# wait until port is free
+portik wait 8080 --free --timeout 30s
 ```
 
 History is stored at: `~/.portik/history.json`
@@ -194,6 +210,7 @@ Keybindings (TUI):
 - r — refresh now
 - / — filter/search
 - Esc — clear filter / cancel
+- ? or h — toggle help
 - q — quit
 
 Actions (only if started with `--actions`):
@@ -221,11 +238,32 @@ Summary
 - [INFO] TIME_WAIT sockets present
 ```
 
+## Troubleshooting in the wild
+
+- "Address already in use" after a restart: check `portik explain <port>` for TIME_WAIT and retry after a short delay.
+- Port looks busy but no PID is shown: re-run with sudo/admin and ensure `lsof`/`ss` is available.
+- Works on localhost but not from another machine: look for loopback-only listeners and bind to `0.0.0.0` or `[::]`.
+- Container port confusion: use `portik who <port> --docker` to see host-to-container mappings.
+- Port is listening but still unreachable: check if a local firewall is active and allow the port.
+
 ## Platform support
 
 - Linux: uses `ss` and `ps`
 - macOS: uses `lsof` and `ps`
-- Windows: builds, but kill/restart/socket inspection are not implemented yet
+- Windows: not supported yet (builds, but core inspection/kill/restart are incomplete)
+
+## Limitations
+
+- Socket → PID resolution is best-effort and can be restricted without elevated privileges.
+- Docker mapping relies on the local `docker` CLI and is not exhaustive for every runtime.
+- `restart` relies on recorded command history and may not reproduce complex launch environments.
+- History is stored in a single JSON file; large histories can be slow to query.
+
+## Design notes
+
+- Port inspection is OS-specific: Linux uses `ss`, macOS uses `lsof`; results are normalized into a common model.
+- Process metadata is enriched via `ps` and best-effort parsing, so fields like cmdline can be empty.
+- Diagnostics are heuristic and intended to guide debugging, not replace system-level analysis.
 
 ## Safety notes
 

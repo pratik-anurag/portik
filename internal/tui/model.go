@@ -56,6 +56,7 @@ type modelTUI struct {
 	mode      viewMode
 	filter    string
 	filtering bool
+	showHelp  bool
 
 	width  int
 	height int
@@ -182,6 +183,9 @@ func (m modelTUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch x.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
+		case "?", "h":
+			m.showHelp = !m.showHelp
+			return m, nil
 		case "up", "k":
 			m.selected = max(0, m.selected-1)
 			return m, nil
@@ -451,9 +455,9 @@ func detailsForRow(row portRow, mode viewMode) string {
 		return "Error:\n" + row.Err + "\n"
 	}
 	if mode == viewExplain {
-		return render.Explain(row.Report)
+		return render.Explain(row.Report, render.Options{})
 	}
-	return render.Who(row.Report)
+	return render.Who(row.Report, render.Options{})
 }
 
 func ipOrStar(ip string) string {

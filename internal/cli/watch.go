@@ -53,7 +53,7 @@ func runWatch(args []string) int {
 					enc.SetIndent("", "  ")
 					_ = enc.Encode(rep)
 				} else {
-					fmt.Print(render.Who(rep))
+					fmt.Print(render.Who(rep, renderOptions(c)))
 					fmt.Println("---")
 				}
 			}

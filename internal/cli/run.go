@@ -84,5 +84,9 @@ Common flags (per command):
   --docker          Enable Docker mapping (shells out to docker)
   --json            JSON output (where supported)
   --yes             Skip confirmation prompts
+  --summary         Short output (where supported)
+  --verbose         Verbose output (where supported)
+  --no-hints        Suppress diagnostic hints (where supported)
+  --color           Color: auto|always|never
 `)
 }
