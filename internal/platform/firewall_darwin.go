@@ -7,23 +7,23 @@ import (
 	"strings"
 )
 
-type FirewallStatus struct {
+type FirewallInfo struct {
 	Active  bool
 	Name    string
 	Details string
 }
 
-func FirewallStatus() FirewallStatus {
+func FirewallStatus() FirewallInfo {
 	if _, err := exec.LookPath("pfctl"); err != nil {
-		return FirewallStatus{}
+		return FirewallInfo{}
 	}
 	out, err := exec.Command("pfctl", "-s", "info").Output()
 	if err != nil {
-		return FirewallStatus{}
+		return FirewallInfo{}
 	}
 	txt := strings.ToLower(string(out))
 	if strings.Contains(txt, "status: enabled") {
-		return FirewallStatus{Active: true, Name: "pf"}
+		return FirewallInfo{Active: true, Name: "pf"}
 	}
-	return FirewallStatus{}
+	return FirewallInfo{}
 }

@@ -8,7 +8,7 @@ It helps answer:
 - Why a port is stuck or bind fails (TIME_WAIT, zombie processes, permission issues, IPv4/IPv6 bind confusion)
 - Whether a port is mapped from a container and which container/service
 - Whether it's safe to restart the owner (kill + restart last command)
-- Who started a process (best-effort process tree and system hints)
+- Who started a process (process tree and system hints)
 
 Note: resolving sockets → PIDs can require elevated privileges on some systems (especially macOS). If you see missing PID/cmdline, try `sudo`.
 
@@ -181,7 +181,7 @@ History is stored at: `~/.portik/history.json`
 - `portik history <port>` — view history in a time window.
 	- Flags: `--since`, `--detect-patterns`, `--json`
 
-- `portik blame <port>` — best-effort process tree and "who started this" hints.
+- `portik blame <port>` — process tree and "who started this" hints.
 	- Flags: `--depth`, `--proto`, `--docker`, `--json`
 
 ## TUI (optional)
@@ -218,7 +218,7 @@ Actions (only if started with `--actions`):
 - K — kill selected port owner (confirm)
 - R — restart selected port owner (confirm)
 
-Each port shows a sparkline representing ownership-change activity over the last 24 hours (best-effort).
+Each port shows a sparkline representing ownership-change activity over the last 24 hours.
 
 ## Examples
 
@@ -254,7 +254,7 @@ Summary
 
 ## Limitations
 
-- Socket → PID resolution is best-effort and can be restricted without elevated privileges.
+- Socket → PID resolution can be restricted without elevated privileges.
 - Docker mapping relies on the local `docker` CLI and is not exhaustive for every runtime.
 - `restart` relies on recorded command history and may not reproduce complex launch environments.
 - History is stored in a single JSON file; large histories can be slow to query.
@@ -262,7 +262,7 @@ Summary
 ## Design notes
 
 - Port inspection is OS-specific: Linux uses `ss`, macOS uses `lsof`; results are normalized into a common model.
-- Process metadata is enriched via `ps` and best-effort parsing, so fields like cmdline can be empty.
+- Process metadata is enriched via `ps` parsing, so fields like cmdline can be empty.
 - Diagnostics are heuristic and intended to guide debugging, not replace system-level analysis.
 
 ## Safety notes

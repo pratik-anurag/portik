@@ -328,7 +328,7 @@ func RenderView(v View) string {
 	}
 
 	if len(v.Patterns) > 0 {
-		b.WriteString("Detected patterns (best-effort)\n")
+		b.WriteString("Detected patterns\n")
 		for _, p := range v.Patterns {
 			fmt.Fprintf(&b, "- %s\n", p.Summary)
 			if p.Details != "" {

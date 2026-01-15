@@ -46,7 +46,7 @@ func Diagnose(rep model.Report) []model.Diagnostic {
 		out = append(out, model.Diagnostic{
 			Kind:     "pid-missing",
 			Severity: "warn",
-			Summary:  "Process details unavailable (best-effort)",
+			Summary:  "Process details unavailable",
 			Details:  "Port has listeners but no owning PID/cmdline was found. This can happen without elevated privileges.",
 			Action:   "Re-run with sudo/admin, or check OS-specific permissions.",
 		})
@@ -170,7 +170,7 @@ func Diagnose(rep model.Report) []model.Diagnostic {
 		out = append(out, model.Diagnostic{
 			Kind:     "env",
 			Severity: "info",
-			Summary:  "Running inside a container (best-effort detection)",
+			Summary:  "Running inside a container",
 			Details:  "Socket-to-process mapping can be limited across container/host boundaries.",
 			Action:   "Run portik on the host; use --docker if relevant.",
 		})
@@ -188,7 +188,7 @@ func Diagnose(rep model.Report) []model.Diagnostic {
 		out = append(out, model.Diagnostic{
 			Kind:     "vm",
 			Severity: "info",
-			Summary:  "Running inside a VM (best-effort detection)",
+			Summary:  "Running inside a VM",
 			Details:  "Mapping host ports to services across VM boundaries is limited without hypervisor integration.",
 			Action:   "Run portik in the same OS context where the service is running (host vs guest).",
 		})

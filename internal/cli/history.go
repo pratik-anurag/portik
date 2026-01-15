@@ -19,7 +19,7 @@ func runHistory(args []string) int {
 	var detect bool
 	fs.StringVar(&sinceStr, "since", "7d", "how far back: 24h|7d|30d")
 	fs.BoolVar(&jsonOut, "json", false, "output JSON")
-	fs.BoolVar(&detect, "detect-patterns", false, "detect simple time patterns (best-effort)")
+	fs.BoolVar(&detect, "detect-patterns", false, "detect simple time patterns")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}

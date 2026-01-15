@@ -19,15 +19,15 @@ type Options struct {
 func Who(rep model.Report, opt Options) string {
 	opt = normalizeOptions(opt)
 	var b strings.Builder
-	fmt.Fprintf(&b, "%s %d/%s\n", label("Port", opt), rep.Port, rep.Proto)
+	fmt.Fprintf(&b, "%s %d/%s\n", label("PORT", opt), rep.Port, rep.Proto)
 
 	if len(rep.Listeners) == 0 {
-		b.WriteString("  (no listeners found)\n")
+		b.WriteString("  (no listeners)\n")
 	} else {
 		if opt.Summary {
 			l, ok := rep.PrimaryListener()
 			if ok {
-				fmt.Fprintf(&b, "%-7s %-24s pid=%d  user=%s  %-12s\n",
+				fmt.Fprintf(&b, "  %-7s %-24s pid=%d  user=%s  %-12s\n",
 					stateLabel(l.State, opt),
 					fmt.Sprintf("%s:%d", fmtIP(l.LocalIP), l.LocalPort),
 					l.PID,
@@ -36,8 +36,11 @@ func Who(rep model.Report, opt Options) string {
 				)
 			}
 		} else {
+			b.WriteString("\n")
+			b.WriteString("  STATE   ADDRESS                  PID     USER        PROCESS       CMD\n")
+			b.WriteString("  -----   -----------------------  ------  ----------  ------------  ---\n")
 			for _, l := range rep.Listeners {
-				fmt.Fprintf(&b, "%-7s %-24s pid=%d  user=%s  %-12s %s\n",
+				fmt.Fprintf(&b, "  %-7s %-24s %-6d  %-10s  %-12s  %s\n",
 					stateLabel(l.State, opt),
 					fmt.Sprintf("%s:%d", fmtIP(l.LocalIP), l.LocalPort),
 					l.PID,
@@ -47,26 +50,16 @@ func Who(rep model.Report, opt Options) string {
 				)
 			}
 		}
-		if !opt.Summary {
-			maxDepth := 4
-			if opt.Verbose {
-				maxDepth = 6
-			}
-			if l, ok := rep.PrimaryListener(); ok && l.PID > 0 {
-				chain, _ := proctree.Build(l.PID, maxDepth)
-				if len(chain) > 1 {
-					fmt.Fprintf(&b, "\nOwner chain (best-effort): %s\n", fmtProcChain(chain, maxDepth))
-				}
-			}
-		}
 	}
 
 	if rep.Docker.Checked {
+		b.WriteString("\n")
 		if rep.Docker.Mapped {
-			fmt.Fprintf(&b, "\nDocker: mapped from %s (%s) service=%s containerPort=%s\n",
+			fmt.Fprintf(&b, "%s %s (%s) service=%s port=%s\n",
+				label("DOCKER", opt),
 				rep.Docker.ContainerID, rep.Docker.ContainerName, dash(rep.Docker.ComposeService), rep.Docker.ContainerPort)
 		} else {
-			b.WriteString("\nDocker: not mapped\n")
+			fmt.Fprintf(&b, "%s not mapped\n", label("DOCKER", opt))
 		}
 	}
 
@@ -82,12 +75,14 @@ func Explain(rep model.Report, opt Options) string {
 		return b.String()
 	}
 
-	b.WriteString("\nSummary\n")
+	b.WriteString("\n")
+	b.WriteString(label("SUMMARY", opt))
+	b.WriteString("\n")
 	if len(rep.Diagnostics) == 0 {
-		b.WriteString("- No hints available\n")
+		b.WriteString("  - No hints available\n")
 	} else {
 		for _, d := range rep.Diagnostics {
-			fmt.Fprintf(&b, "- %s %s\n", severityLabel(d.Severity, opt), d.Summary)
+			fmt.Fprintf(&b, "  - %s %s\n", severityLabel(d.Severity, opt), d.Summary)
 		}
 	}
 
@@ -97,16 +92,18 @@ func Explain(rep model.Report, opt Options) string {
 
 	sections := groupDiagnostics(rep.Diagnostics)
 	if len(sections) > 0 {
-		b.WriteString("\nLikely causes\n")
+		b.WriteString("\n")
+		b.WriteString(label("LIKELY CAUSES", opt))
+		b.WriteString("\n")
 		for _, s := range sections {
 			if len(s.Items) == 0 {
 				continue
 			}
-			fmt.Fprintf(&b, "\n%s\n", sectionTitle(s.Title, opt))
+			fmt.Fprintf(&b, "  %s\n", sectionTitle(s.Title, opt))
 			for _, d := range s.Items {
-				fmt.Fprintf(&b, "• %s\n", d.Summary)
+				fmt.Fprintf(&b, "    • %s\n", d.Summary)
 				if d.Details != "" {
-					fmt.Fprintf(&b, "  %s\n", d.Details)
+					fmt.Fprintf(&b, "      %s\n", d.Details)
 				}
 			}
 		}
@@ -114,9 +111,11 @@ func Explain(rep model.Report, opt Options) string {
 
 	actions := dedupeActions(rep.Diagnostics)
 	if len(actions) > 0 {
-		b.WriteString("\nNext actions\n")
+		b.WriteString("\n")
+		b.WriteString(label("NEXT ACTIONS", opt))
+		b.WriteString("\n")
 		for _, a := range actions {
-			fmt.Fprintf(&b, "- %s\n", a)
+			fmt.Fprintf(&b, "  - %s\n", a)
 		}
 	}
 	return b.String()
@@ -124,7 +123,7 @@ func Explain(rep model.Report, opt Options) string {
 
 func Blame(rep model.Report, chain []proctree.Proc, started proctree.StartedBy) string {
 	var b strings.Builder
-	b.WriteString(Who(rep))
+	b.WriteString(Who(rep, Options{}))
 	b.WriteString("\nProcess tree (child → parents)\n")
 	for i, p := range chain {
 		prefix := "└─"
@@ -136,7 +135,7 @@ func Blame(rep model.Report, chain []proctree.Proc, started proctree.StartedBy) 
 			fmt.Fprintf(&b, "   cmd: %s\n", p.Cmdline)
 		}
 	}
-	b.WriteString("\nWho started this? (best-effort)\n")
+	b.WriteString("\nWho started this?\n")
 	fmt.Fprintf(&b, "- %s", strings.ToUpper(started.Kind))
 	if started.Details != "" {
 		fmt.Fprintf(&b, ": %s", started.Details)

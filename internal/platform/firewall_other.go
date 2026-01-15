@@ -2,12 +2,12 @@
 
 package platform
 
-type FirewallStatus struct {
+type FirewallInfo struct {
 	Active  bool
 	Name    string
 	Details string
 }
 
-func FirewallStatus() FirewallStatus {
-	return FirewallStatus{}
+func FirewallStatus() FirewallInfo {
+	return FirewallInfo{}
 }

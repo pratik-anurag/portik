@@ -67,7 +67,7 @@ Commands:
   watch <port>      Watch a port and record changes
   history <port>    Show port ownership history (+ pattern detection)
   daemon            Monitor multiple ports and record history (foreground)
-	blame <port>      Process tree + who started this (best-effort)
+	blame <port>      Process tree + who started this
 	tui               Interactive TUI (build tag: tui)
 
 	scan              Scan a set/range of ports and show a table
