@@ -48,6 +48,8 @@ func Run(args []string) int {
 		return runTop(args[1:])
 	case "wait":
 		return runWait(args[1:])
+	case "trace":
+		return runTrace(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", args[0])
 		printHelp()
@@ -79,6 +81,7 @@ Commands:
   conn              Show active connections to/from a port (top clients)
   top               Top ports by connection count
   wait              Wait until a port is listening or becomes free
+  trace             Trace ownership and routing hints for a port
 
   version           Show version
 

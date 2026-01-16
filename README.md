@@ -87,6 +87,9 @@ portik history 5432 --since 30d --detect-patterns
 # follow changes (delta-only)
 portik who 5432 --follow --interval 2s
 
+# trace ownership/proxy layers
+portik trace 5432
+
 # daemon (foreground; use nohup/systemd if desired)
 portik daemon --ports 5432,6379 --interval 30s --docker
 
@@ -216,6 +219,9 @@ History is stored at: `~/.portik/history.json`
 
 - `portik top` — top ports by connection count (scan list/range).
 	- Flags: `--ports`, `--top`, `--clients`, `--proto`, `--json`
+
+- `portik trace <port>` — trace ownership/proxy hints for a port.
+	- Flags: `--proto`, `--docker`, `--json`
 
 ## TUI (optional)
 
