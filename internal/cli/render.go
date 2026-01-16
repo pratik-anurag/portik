@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/mattn/go-isatty"
+	"golang.org/x/term"
 
 	"portik/internal/history"
 	"portik/internal/render"
@@ -30,7 +30,7 @@ func resolveColor(mode string) bool {
 	case "never":
 		return false
 	default:
-		return isatty.IsTerminal(os.Stdout.Fd())
+		return term.IsTerminal(int(os.Stdout.Fd()))
 	}
 }
 
