@@ -8,6 +8,24 @@
   <img src="./assets/portik-logo.svg" alt="portik logo" width="640" />
 </p>
 
+## Table of Contents
+
+- [Overview](#overview)
+- [1-minute quickstart](##1-minute-quickstart
+- [Real problems solved](#real-problems-solved)
+- [Install](#install)
+- [Quickstart (more examples)](#quickstart-more-examples)
+  - [Scan / Free / Reserve](##scan--free--reserve)
+  - [commands
+  - [TUI (optional)](##tui-optional)
+- [Troubleshooting in the wild](#troubleshooting-in-the-wild)
+- [Platform support](#platform-support)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Overview
+
+
 portik is a developer-friendly CLI to inspect, explain, and manage port ownership.
 
 It helps answer:
