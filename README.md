@@ -33,6 +33,18 @@ portik explain 5432
 portik who 5432 --follow --interval 2s
 ```
 
+Example:
+
+```
+PORT 5432/tcp
+
+  STATE   ADDRESS    PID    USER  PROCESS   CMD
+  LISTEN  *:5432     12345  me    Postgres  .../postgres -D /usr/local/var/postgres
+
+RECENT OWNERS
+  01-18 21:09:25  Postgres (me)
+```
+
 
 ## Real problems solved
 
@@ -123,6 +135,21 @@ portik scan --ports 3000-3010 --json
 
 # tune concurrency (default: CPU count, max 32)
 portik scan --ports 3000-3999 --concurrency 16
+```
+
+Output:
+
+```
+PORT   STATUS   OWNER          PID    ADDR    DOCKER  HINT
+────   ──────   ─────────────  ─────  ──────  ──────  ───────────────
+9000   in-use   Python (raj)   30831  *:9000          Port is in use
+9001   free
+9002   free
+```
+
+### Free / Reserve
+
+```bash
 
 # ask OS for an ephemeral free port (default)
 portik free
@@ -150,6 +177,20 @@ portik reserve --bind 0.0.0.0 --for 30s
 
 # JSON output
 portik reserve --for 30s --json
+```
+
+Output:
+
+```
+30045
+```
+
+Output:
+
+```
+Reserved 55569/tcp on 127.0.0.1 until 2026-01-18T21:09:56+05:30
+(holding for 5s; Ctrl+C to release)
+```
 
 ## `use` — run a command on a free port automatically
 
@@ -161,6 +202,7 @@ portik reserve --for 30s --json
 
 ### Basic usage
 
+```bash
 # pick an ephemeral free port and run a command
 portik use -- python -m http.server
 
@@ -190,6 +232,12 @@ portik wait 8080 --listening --timeout 60s
 
 # wait until port is free
 portik wait 8080 --free --timeout 30s
+```
+
+Output:
+
+```
+8080/tcp is LISTENING
 ```
 
 History is stored at: `~/.portik/history.json`
