@@ -9,16 +9,15 @@
 ## Table of Contents
 
 - [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-  - [Basic Commands](#basic-commands)
-  - [Scanning & Port Management](#scanning--port-management)
-  - [Interactive TUI](#interactive-tui)
-- [Advanced](#advanced)
-- [Troubleshooting](#troubleshooting)
-- [Platform Support](#platform-support)
+- [1-minute quickstart](##1-minute-quickstart
+- [Real problems solved](#real-problems-solved)
+- [Install](#install)
+- [Quickstart (more examples)](#quickstart-more-examples)
+  - [Scan / Free / Reserve](##scan--free--reserve)
+  - [commands
+  - [TUI (optional)](##tui-optional)
+- [Troubleshooting in the wild](#troubleshooting-in-the-wild)
+- [Platform support](#platform-support)
 - [Contributing](#contributing)
 - [License](#license)
 
