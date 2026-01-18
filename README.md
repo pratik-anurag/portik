@@ -1,5 +1,7 @@
 # portik
 
+[![ci](https://github.com/pratik-anurag/portik/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pratik-anurag/portik/actions/workflows/ci.yml)
+
 
 
 <p align="center">
@@ -69,7 +71,7 @@ go build ./cmd/portik
 
 ## Requirements
 
-- Go 1.22+ (use an up-to-date toolchain on macOS Apple Silicon)
+- Go 1.24+ (use an up-to-date toolchain on macOS Apple Silicon)
 - Linux: `ss` and `ps` in `PATH`
 - macOS: `lsof` and `ps` in `PATH`
 - Optional: `docker` in `PATH` for `--docker` features

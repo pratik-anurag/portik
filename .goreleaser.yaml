@@ -1,0 +1,41 @@
+version: 2
+
+project_name: portik
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: portik
+    main: ./cmd/portik
+    binary: portik
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X portik/internal/cli.version={{ .Version }} -X portik/internal/cli.commit={{ .ShortCommit }}
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  name_template: "{{ .Version }}-next"
+
+changelog:
+  use: github
