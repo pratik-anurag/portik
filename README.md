@@ -46,6 +46,12 @@ portik is in active development and is currently **alpha**. Interfaces and outpu
 
 ## Install
 
+### Homebrew (recommended)
+Coming soon.
+
+### Download a binary
+Coming soon (GitHub Releases).
+
 ### Build from source
 
 ```bash
@@ -191,6 +197,40 @@ portik wait 8080 --listening --timeout 60s
 # wait until port is free
 portik wait 8080 --free --timeout 30s
 ```
+
+## lint
+Lints *current listeners* on the machine for common port misconfigurations.
+
+It flags things like:
+- Sensitive service ports bound to all interfaces (e.g. 5432/6379/3306 on `0.0.0.0` or `::`)
+- Dev-style ports bound publicly (e.g. 3000/5173/8080)
+- Privileged ports (<1024) in use
+- IPv6-only listeners (common IPv4 vs IPv6 confusion)
+- Missing PID visibility (hint to run with `sudo`)
+
+Examples:
+```bash
+# lint TCP listeners (default)
+portik lint
+
+# lint UDP listeners
+portik lint --proto udp
+
+# lint both tcp+udp
+portik lint --proto all
+
+# machine-readable
+portik lint --json
+
+# only show warnings/errors
+portik lint --min-severity warn
+```
+
+Flags:
+- `--proto tcp|udp|all` (default: tcp)
+- `--json`
+- `--min-severity info|warn|error`
+
 
 History is stored at: `~/.portik/history.json`
 
