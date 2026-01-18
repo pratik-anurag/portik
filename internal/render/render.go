@@ -201,28 +201,6 @@ func dash(s string) string {
 	return s
 }
 
-func fmtProcChain(chain []proctree.Proc, max int) string {
-	if len(chain) == 0 {
-		return "-"
-	}
-	if max <= 0 || max > len(chain) {
-		max = len(chain)
-	}
-	var parts []string
-	for i := 0; i < max; i++ {
-		p := chain[i]
-		name := dash(p.Name)
-		if name == "-" {
-			name = "?"
-		}
-		parts = append(parts, fmt.Sprintf("%s(%d)", name, p.PID))
-	}
-	if max < len(chain) {
-		parts = append(parts, "...")
-	}
-	return strings.Join(parts, " <- ")
-}
-
 type diagSection struct {
 	Title string
 	Items []model.Diagnostic

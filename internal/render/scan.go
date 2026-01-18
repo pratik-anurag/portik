@@ -5,39 +5,6 @@ import (
 	"strings"
 )
 
-type scanRow struct {
-	Port   int
-	Proto  string
-	Status string
-	Owner  string
-	PID    int32
-	Addr   string
-	Docker string
-	Hint   string
-	Error  string
-}
-
-type ScanTableRow interface {
-	// duck-typing helper: your cli.scanRow has matching exported fields, so we re-map.
-}
-
-func ScanTable(rows any) string {
-	// Expect []cli.scanRow but avoid import cycles by using reflection-free approach:
-	// The cli will pass []cli.scanRow; we convert by fmt.Sprintf via known formatting in renderScanTableFrom.
-	// Simpler: keep this renderer accepting a concrete internal struct; so we provide an adapter below.
-	switch v := rows.(type) {
-	case []interface{}:
-		_ = v
-	}
-	// The CLI passes []scanRow from cli. For simplicity, render uses a helper function in cli that calls ScanTableRows().
-	// But since you asked for only file paths, we keep ScanTable signature matching current usage:
-	// In cli/scan.go we call render.ScanTable(rows) where rows is []cli.scanRow.
-	// We therefore implement ScanTable via a tiny interface expectation using fmt on maps is messy.
-	// Best: change cli/scan.go to call render.ScanTableRows(renderRows).
-	return "render.ScanTable: invalid input\n"
-}
-
-// Use this instead: render.ScanTableRows(...)
 type ScanRows []struct {
 	Port   int
 	Proto  string

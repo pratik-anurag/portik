@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"portik/internal/model"
@@ -33,8 +34,10 @@ func inspectDarwin(port int, proto string, includeConnections bool) ([]model.Lis
 			continue
 		}
 		cmd := m[reLsof.SubexpIndex("cmd")]
-		var pid int
-		fmt.Sscanf(m[reLsof.SubexpIndex("pid")], "%d", &pid)
+		pid, err := strconv.Atoi(m[reLsof.SubexpIndex("pid")])
+		if err != nil {
+			continue
+		}
 		user := m[reLsof.SubexpIndex("user")]
 		addr := m[reLsof.SubexpIndex("addr")]
 		state := strings.ToUpper(strings.TrimSpace(m[reLsof.SubexpIndex("state")]))
@@ -88,14 +91,12 @@ func parseLsofAddr(addr string) (string, int) {
 		i := strings.LastIndex(addr, "]:")
 		if i > 0 {
 			ip := addr[1:i]
-			var p int
-			fmt.Sscanf(addr[i+2:], "%d", &p)
+			p := parseInt(addr[i+2:])
 			return ip, p
 		}
 	}
 	if strings.HasPrefix(addr, "*:") {
-		var p int
-		fmt.Sscanf(strings.TrimPrefix(addr, "*:"), "%d", &p)
+		p := parseInt(strings.TrimPrefix(addr, "*:"))
 		return "", p
 	}
 	i := strings.LastIndex(addr, ":")
@@ -103,8 +104,7 @@ func parseLsofAddr(addr string) (string, int) {
 		return addr, 0
 	}
 	ip := addr[:i]
-	var p int
-	fmt.Sscanf(addr[i+1:], "%d", &p)
+	p := parseInt(addr[i+1:])
 	return ip, p
 }
 

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -169,6 +168,5 @@ func normalizeIP(s string) string {
 		return parts[0]
 	}
 	// raw ipv6 or ipv4
-	_ = fmt.Sprintf("") // keep fmt imported if you later extend
 	return s
 }

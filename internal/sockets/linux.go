@@ -105,7 +105,7 @@ func parseUsers(users string) (pid int, proc string) {
 		return 0, ""
 	}
 	if m := reUsersPid.FindStringSubmatch(users); m != nil {
-		fmt.Sscanf(m[1], "%d", &pid)
+		pid = parseInt(m[1])
 	}
 	if m := reUsersProc.FindStringSubmatch(users); m != nil {
 		proc = m[1]
@@ -120,14 +120,12 @@ func splitHostPort(addr string) (string, int) {
 		i := strings.LastIndex(addr, "]:")
 		if i > 0 {
 			ip := addr[1:i]
-			var p int
-			fmt.Sscanf(addr[i+2:], "%d", &p)
+			p := parseInt(addr[i+2:])
 			return ip, p
 		}
 	}
 	if strings.HasPrefix(addr, "*:") {
-		var p int
-		fmt.Sscanf(strings.TrimPrefix(addr, "*:"), "%d", &p)
+		p := parseInt(strings.TrimPrefix(addr, "*:"))
 		return "", p
 	}
 	i := strings.LastIndex(addr, ":")
@@ -135,8 +133,7 @@ func splitHostPort(addr string) (string, int) {
 		return addr, 0
 	}
 	ip := addr[:i]
-	var p int
-	fmt.Sscanf(addr[i+1:], "%d", &p)
+	p := parseInt(addr[i+1:])
 	return ip, p
 }
 
