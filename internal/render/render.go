@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"portik/internal/model"
-	"portik/internal/proctree"
-	"portik/internal/sys"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/proctree"
+	"github.com/pratik-anurag/portik/internal/sys"
 )
 
 type Options struct {

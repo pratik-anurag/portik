@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strings"
 
-	"portik/internal/model"
-	"portik/internal/proctree"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/proctree"
 )
 
 type Step struct {

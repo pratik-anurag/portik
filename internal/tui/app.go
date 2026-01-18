@@ -1,5 +1,3 @@
-//go:build tui
-
 package tui
 
 import (

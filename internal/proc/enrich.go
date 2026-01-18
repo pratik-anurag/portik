@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 func Enrich(l *model.Listener) {

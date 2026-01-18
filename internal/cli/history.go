@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"portik/internal/history"
+	"github.com/pratik-anurag/portik/internal/history"
 )
 
 func runHistory(args []string) int {

@@ -6,8 +6,8 @@ import (
 
 	"golang.org/x/term"
 
-	"portik/internal/history"
-	"portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/history"
+	"github.com/pratik-anurag/portik/internal/render"
 )
 
 func renderOptions(c *commonFlags) render.Options {

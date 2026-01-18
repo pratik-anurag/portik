@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"portik/internal/trace"
+	"github.com/pratik-anurag/portik/internal/trace"
 )
 
 func Trace(port int, proto string, steps []trace.Step, opt Options) string {

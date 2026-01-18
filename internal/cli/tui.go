@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"portik/internal/tui"
+	"github.com/pratik-anurag/portik/internal/tui"
 )
 
 func runTUI(args []string) int {

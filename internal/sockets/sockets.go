@@ -1,6 +1,6 @@
 package sockets
 
-import "portik/internal/model"
+import "github.com/pratik-anurag/portik/internal/model"
 
 // Inspect returns listeners (and optionally connections) for a given port/proto.
 // Implementations are OS-specific (linux/darwin).

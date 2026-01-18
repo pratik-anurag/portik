@@ -8,16 +8,16 @@ import (
 	"sort"
 	"strings"
 
-	"portik/internal/inspect"
-	"portik/internal/model"
-	"portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/inspect"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/render"
 )
 
 type connAggRow struct {
-	RemoteIP string            `json:"remote_ip"`
-	Total    int               `json:"total"`
-	ByState  map[string]int    `json:"by_state,omitempty"`
-	Samples  []string          `json:"samples,omitempty"` // remote:port examples (optional)
+	RemoteIP string         `json:"remote_ip"`
+	Total    int            `json:"total"`
+	ByState  map[string]int `json:"by_state,omitempty"`
+	Samples  []string       `json:"samples,omitempty"` // remote:port examples (optional)
 }
 
 func runConn(args []string) int {

@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"portik/internal/reserve"
-	"portik/internal/use"
+	"github.com/pratik-anurag/portik/internal/reserve"
+	"github.com/pratik-anurag/portik/internal/use"
 )
 
 // portik use --ports 3000-3999 -- <cmd> [args...]
@@ -77,18 +77,18 @@ func runUse(args []string) int {
 
 	// Run the child process with PORT set.
 	code, err := use.RunWithPort(use.RunOptions{
-		Port:           port,
-		Proto:          proto,
-		Bind:           bind,
-		Args:           cmdArgs,
-		Template:       template,
-		Shell:          shell,
-		EnvVarName:     "PORT",
-		ExtraEnv:       nil,
-		ReserveHint:    reserve.FreeOptions{Proto: proto, Bind: bind, Attempts: attempts},
-		Stdout:         os.Stdout,
-		Stderr:         os.Stderr,
-		Stdin:          os.Stdin,
+		Port:        port,
+		Proto:       proto,
+		Bind:        bind,
+		Args:        cmdArgs,
+		Template:    template,
+		Shell:       shell,
+		EnvVarName:  "PORT",
+		ExtraEnv:    nil,
+		ReserveHint: reserve.FreeOptions{Proto: proto, Bind: bind, Attempts: attempts},
+		Stdout:      os.Stdout,
+		Stderr:      os.Stderr,
+		Stdin:       os.Stdin,
 	})
 	if err != nil {
 		// Preserve exit code if available

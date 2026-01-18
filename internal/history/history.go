@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 const maxEntriesPerPort = 200

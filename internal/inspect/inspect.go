@@ -5,11 +5,11 @@ import (
 	"os/user"
 	"time"
 
-	"portik/internal/docker"
-	"portik/internal/model"
-	"portik/internal/platform"
-	"portik/internal/proc"
-	"portik/internal/sockets"
+	"github.com/pratik-anurag/portik/internal/docker"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/platform"
+	"github.com/pratik-anurag/portik/internal/proc"
+	"github.com/pratik-anurag/portik/internal/sockets"
 )
 
 type Options struct {

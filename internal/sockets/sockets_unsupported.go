@@ -5,7 +5,7 @@ package sockets
 import (
 	"fmt"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 func inspect(port int, proto string, includeConnections bool) ([]model.Listener, []model.Conn, error) {

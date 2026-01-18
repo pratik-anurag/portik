@@ -6,10 +6,10 @@ import (
 	"os"
 	"time"
 
-	"portik/internal/history"
-	"portik/internal/inspect"
-	"portik/internal/render"
-	"portik/internal/sys"
+	"github.com/pratik-anurag/portik/internal/history"
+	"github.com/pratik-anurag/portik/internal/inspect"
+	"github.com/pratik-anurag/portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/sys"
 )
 
 func runRestart(args []string) int {

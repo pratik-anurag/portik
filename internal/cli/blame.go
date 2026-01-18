@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"portik/internal/inspect"
-	"portik/internal/proctree"
-	"portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/inspect"
+	"github.com/pratik-anurag/portik/internal/proctree"
+	"github.com/pratik-anurag/portik/internal/render"
 )
 
 func runBlame(args []string) int {

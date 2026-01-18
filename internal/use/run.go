@@ -8,7 +8,7 @@ import (
 	"strings"
 	"syscall"
 
-	"portik/internal/reserve"
+	"github.com/pratik-anurag/portik/internal/reserve"
 )
 
 type RunOptions struct {

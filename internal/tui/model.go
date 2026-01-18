@@ -1,5 +1,3 @@
-//go:build tui
-
 package tui
 
 import (
@@ -10,11 +8,11 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"portik/internal/history"
-	"portik/internal/inspect"
-	"portik/internal/model"
-	"portik/internal/render"
-	"portik/internal/sys"
+	"github.com/pratik-anurag/portik/internal/history"
+	"github.com/pratik-anurag/portik/internal/inspect"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/sys"
 )
 
 type viewMode int

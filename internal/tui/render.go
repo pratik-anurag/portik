@@ -1,5 +1,3 @@
-//go:build tui
-
 package tui
 
 import (
@@ -9,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"portik/internal/history"
+	"github.com/pratik-anurag/portik/internal/history"
 )
 
 func renderUI(m modelTUI) string {
@@ -215,7 +213,6 @@ func renderHistoryLast20(m modelTUI, port int) string {
 	if len(evs) == 0 {
 		for _, k := range []string{fmt.Sprintf("%d/tcp", port), fmt.Sprintf("%d/udp", port)} {
 			if len(m.store.Ports[k]) > 0 {
-				key = k
 				evs = m.store.Ports[k]
 				break
 			}
