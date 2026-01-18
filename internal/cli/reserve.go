@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"portik/internal/reserve"
+	"github.com/pratik-anurag/portik/internal/reserve"
 )
 
 func runReserve(args []string) int {

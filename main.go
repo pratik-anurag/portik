@@ -7,6 +7,5 @@ import (
 )
 
 func main() {
-	// takes the arg and passes to cli RUn
 	os.Exit(cli.Run(os.Args[1:]))
 }

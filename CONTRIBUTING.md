@@ -3,7 +3,7 @@
 Thanks for contributing to **portik**.
 
 ## Requirements
-- Go 1.22+
+- Go 1.24+
 - On Linux: `ss` and `ps` in PATH
 - On macOS: `lsof` and `ps` in PATH
 - Optional: `docker` in PATH for `--docker` features

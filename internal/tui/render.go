@@ -1,5 +1,3 @@
-//go:build tui
-
 package tui
 
 import (
@@ -9,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"portik/internal/history"
+	"github.com/pratik-anurag/portik/internal/history"
 )
 
 func renderUI(m modelTUI) string {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os/user"
 
-	"portik/internal/model"
-	"portik/internal/platform"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/platform"
 )
 
 func Diagnose(rep model.Report) []model.Diagnostic {

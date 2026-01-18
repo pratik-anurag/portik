@@ -60,11 +60,27 @@ portik is in active development and is currently **alpha**. Interfaces and outpu
 
 ## Install
 
-### Build from source
+### Using `go install` (Recommended)
+
+If you have Go 1.24+ installed, you can install `portik` globally on your host:
 
 ```bash
-git clone https://github.com/pratik-anurag/portik
-cd portik
+# Install the latest version
+go install github.com/pratik-anurag/portik@latest
+
+# Install with TUI support
+go install -tags tui github.com/pratik-anurag/portik@latest
+```
+
+### From source
+
+If you have the repository cloned:
+
+```bash
+# Install to $GOPATH/bin
+go install ./cmd/portik
+
+# Or just build the binary locally
 go build ./cmd/portik
 ./portik --help
 ```

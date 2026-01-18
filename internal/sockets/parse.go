@@ -12,4 +12,3 @@ func parseInt(s string) int {
 	}
 	return n
 }
-

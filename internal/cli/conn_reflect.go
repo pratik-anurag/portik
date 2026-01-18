@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 // extractConnectionsAny tries to read Report.Connections (slice) without depending on its element type.

@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 // ss -H -ltnp 'sport = :5432'

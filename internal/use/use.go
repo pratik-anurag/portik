@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"portik/internal/ports"
-	"portik/internal/reserve"
+	"github.com/pratik-anurag/portik/internal/ports"
+	"github.com/pratik-anurag/portik/internal/reserve"
 )
 
 type PickOptions struct {

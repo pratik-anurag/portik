@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"portik/internal/inspect"
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/inspect"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 func runWait(args []string) int {

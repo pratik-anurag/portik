@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"portik/internal/inspect"
-	"portik/internal/model"
-	"portik/internal/ports"
-	"portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/inspect"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/ports"
+	"github.com/pratik-anurag/portik/internal/render"
 )
 
 type scanRow struct {

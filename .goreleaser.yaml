@@ -21,7 +21,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X portik/internal/cli.version={{ .Version }} -X portik/internal/cli.commit={{ .ShortCommit }}
+      - -s -w -X github.com/pratik-anurag/portik/internal/cli.version={{ .Version }} -X github.com/pratik-anurag/portik/internal/cli.commit={{ .ShortCommit }}
 
 archives:
   - formats:

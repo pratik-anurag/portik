@@ -3,7 +3,7 @@ BINARY?=portik
 # Version/commit -- can be set when invoking make, or computed from git
 VERSION?=dev
 COMMIT?=$(shell git rev-parse --short HEAD 2>/dev/null || echo "")
-LDFLAGS?=-X 'portik/internal/cli.version=$(VERSION)' -X 'portik/internal/cli.commit=$(COMMIT)'
+LDFLAGS?=-X 'github.com/pratik-anurag/portik/internal/cli.version=$(VERSION)' -X 'github.com/pratik-anurag/portik/internal/cli.commit=$(COMMIT)'
 
 .PHONY: build test run clean release-snapshot release
 

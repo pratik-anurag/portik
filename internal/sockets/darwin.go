@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 // lsof -nP -iTCP:5432
