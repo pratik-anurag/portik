@@ -111,3 +111,19 @@ func DedupeDiagnostics(in []Diagnostic) []Diagnostic {
 	}
 	return out
 }
+
+type LintFinding struct {
+	Severity string `json:"severity"` // info|warn|error
+	Code     string `json:"code"`
+	Summary  string `json:"summary"`
+	Details  string `json:"details,omitempty"`
+	Action   string `json:"action,omitempty"`
+
+	Proto   string `json:"proto"`
+	Port    int    `json:"port"`
+	LocalIP string `json:"local_ip,omitempty"`
+
+	PID      int32  `json:"pid,omitempty"`
+	ProcName string `json:"proc_name,omitempty"`
+	User     string `json:"user,omitempty"`
+}
