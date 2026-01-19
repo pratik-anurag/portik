@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"portik/internal/model"
-	"portik/internal/proc"
-	"portik/internal/render"
-	"portik/internal/sockets"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/proc"
+	"github.com/pratik-anurag/portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/sockets"
 )
 
 type listenerWithProto struct {

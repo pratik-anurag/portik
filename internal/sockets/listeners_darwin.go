@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 func listListeners(proto string) ([]model.Listener, error) {

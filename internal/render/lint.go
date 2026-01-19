@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 func LintTable(findings []model.LintFinding) string {
