@@ -50,6 +50,8 @@ func Run(args []string) int {
 		return runWait(args[1:])
 	case "trace":
 		return runTrace(args[1:])
+	case "lint":
+		return runLint(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", args[0])
 		printHelp()
