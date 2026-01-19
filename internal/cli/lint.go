@@ -35,7 +35,7 @@ func runLint(args []string) int {
 		return 2
 	}
 
-	protos := []string{}
+	var protos []string
 	switch strings.ToLower(strings.TrimSpace(proto)) {
 	case "tcp", "udp":
 		protos = []string{strings.ToLower(proto)}
