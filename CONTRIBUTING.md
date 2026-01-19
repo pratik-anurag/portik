@@ -11,7 +11,7 @@ Thanks for contributing to **portik**.
 ## Local dev
 ```bash
 go test ./...
-go run ./cmd/portik --help
+go run . --help
 ```
 
 ## How to report bugs

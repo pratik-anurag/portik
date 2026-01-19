@@ -8,13 +8,13 @@ LDFLAGS?=-X 'github.com/pratik-anurag/portik/internal/cli.version=$(VERSION)' -X
 .PHONY: build test run clean release-snapshot release
 
 build:
-	go build -ldflags "$(LDFLAGS)" -o bin/$(BINARY) ./cmd/portik
+	go build -ldflags "$(LDFLAGS)" -o bin/$(BINARY) .
 
 test:
 	go test ./...
 
 run:
-	go run ./cmd/portik --help
+	go run . --help
 
 clean:
 	rm -rf bin dist

@@ -12,13 +12,13 @@ Build
 Build using the Homebrew Go (recommended on macOS Apple Silicon):
 
 ```bash
-/opt/homebrew/bin/go build -o portik ./cmd/portik
+/opt/homebrew/bin/go build -o portik .
 ```
 
 Or, if your `go` is already the right toolchain:
 
 ```bash
-go build -o portik ./cmd/portik
+go build -o portik .
 ```
 
 Run tests
@@ -160,7 +160,7 @@ Record and inspect port ownership history (if available):
 - If you see `dyld: missing LC_UUID load command`, build with a modern Go toolchain for Apple Silicon (or the matching arch). Example using Homebrew Go:
 
 ```bash
-/opt/homebrew/bin/go build -o portik ./cmd/portik
+/opt/homebrew/bin/go build -o portik .
 ```
 
 Or update PATH to prefer `/opt/homebrew/bin`.
@@ -179,7 +179,7 @@ if command -v go >/dev/null && [[ $(go version | sed -E 's/.* darwin\/(.*)$/\1/'
 fi
 
 echo "Building..."
-$BUILD_CMD build -o portik ./cmd/portik
+$BUILD_CMD build -o portik .
 
 echo "Start test server on 54321"
 nohup python3 -m http.server 54321 > /tmp/portik_test.log 2>&1 &

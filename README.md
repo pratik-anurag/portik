@@ -78,10 +78,10 @@ If you have the repository cloned:
 
 ```bash
 # Install to $GOPATH/bin
-go install ./cmd/portik
+go install .
 
 # Or just build the binary locally
-go build ./cmd/portik
+go build .
 ./portik --help
 ```
 
@@ -299,10 +299,10 @@ Build / Run (with TUI):
 
 ```bash
 # run directly
-go run -tags tui ./cmd/portik tui --ports 5432,6379 --interval 2s --docker
+go run -tags tui . tui --ports 5432,6379 --interval 2s --docker
 
 # or build a binary with TUI enabled
-go build -tags tui -o portik ./cmd/portik
+go build -tags tui -o portik .
 ./portik tui --ports 5432,6379 --interval 2s --docker
 ```
 
