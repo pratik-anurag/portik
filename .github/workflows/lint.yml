@@ -23,13 +23,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version-file: go.mod
           cache: true
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.58
+          # Pin a recent golangci-lint, but build it with the repo's Go toolchain
+          # (install-mode: goinstall) so it can target go 1.24+.
+          version: v1.64.8
+          install-mode: goinstall
           args: --timeout=5m --modules-download-mode=readonly
-          annotations: true
 

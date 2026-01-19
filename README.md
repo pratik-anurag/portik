@@ -1,5 +1,7 @@
 # portik
 
+[![ci](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+
 
 
 <p align="center">
@@ -33,6 +35,18 @@ portik explain 5432
 portik who 5432 --follow --interval 2s
 ```
 
+Example:
+
+```
+PORT 5432/tcp
+
+  STATE   ADDRESS    PID    USER  PROCESS   CMD
+  LISTEN  *:5432     12345  me    Postgres  .../postgres -D /usr/local/var/postgres
+
+RECENT OWNERS
+  01-18 21:09:25  Postgres (me)
+```
+
 
 ## Real problems solved
 
@@ -53,17 +67,34 @@ Coming soon.
 Coming soon (GitHub Releases).
 
 ### Build from source
+### Using `go install` (Recommended)
+
+If you have Go 1.24+ installed, you can install `portik` globally on your host:
 
 ```bash
-git clone https://github.com/pratik-anurag/portik
-cd portik
-go build ./cmd/portik
+# Install the latest version
+go install github.com/pratik-anurag/portik@latest
+
+# Install with TUI support
+go install -tags tui github.com/pratik-anurag/portik@latest
+```
+
+### From source
+
+If you have the repository cloned:
+
+```bash
+# Install to $GOPATH/bin
+go install .
+
+# Or just build the binary locally
+go build .
 ./portik --help
 ```
 
 ## Requirements
 
-- Go 1.22+ (use an up-to-date toolchain on macOS Apple Silicon)
+- Go 1.24+ (use an up-to-date toolchain on macOS Apple Silicon)
 - Linux: `ss` and `ps` in `PATH`
 - macOS: `lsof` and `ps` in `PATH`
 - Optional: `docker` in `PATH` for `--docker` features
@@ -129,6 +160,21 @@ portik scan --ports 3000-3010 --json
 
 # tune concurrency (default: CPU count, max 32)
 portik scan --ports 3000-3999 --concurrency 16
+```
+
+Output:
+
+```
+PORT   STATUS   OWNER          PID    ADDR    DOCKER  HINT
+────   ──────   ─────────────  ─────  ──────  ──────  ───────────────
+9000   in-use   Python (raj)   30831  *:9000          Port is in use
+9001   free
+9002   free
+```
+
+### Free / Reserve
+
+```bash
 
 # ask OS for an ephemeral free port (default)
 portik free
@@ -156,6 +202,20 @@ portik reserve --bind 0.0.0.0 --for 30s
 
 # JSON output
 portik reserve --for 30s --json
+```
+
+Output:
+
+```
+30045
+```
+
+Output:
+
+```
+Reserved 55569/tcp on 127.0.0.1 until 2026-01-18T21:09:56+05:30
+(holding for 5s; Ctrl+C to release)
+```
 
 ## `use` — run a command on a free port automatically
 
@@ -167,6 +227,7 @@ portik reserve --for 30s --json
 
 ### Basic usage
 
+```bash
 # pick an ephemeral free port and run a command
 portik use -- python -m http.server
 
@@ -197,6 +258,13 @@ portik wait 8080 --listening --timeout 60s
 # wait until port is free
 portik wait 8080 --free --timeout 30s
 ```
+
+Output:
+
+```
+8080/tcp is LISTENING
+```
+
 
 ## lint
 Lints *current listeners* on the machine for common port misconfigurations.
@@ -230,7 +298,6 @@ Flags:
 - `--proto tcp|udp|all` (default: tcp)
 - `--json`
 - `--min-severity info|warn|error`
-
 
 History is stored at: `~/.portik/history.json`
 
@@ -273,10 +340,10 @@ Build / Run (with TUI):
 
 ```bash
 # run directly
-go run -tags tui ./cmd/portik tui --ports 5432,6379 --interval 2s --docker
+go run -tags tui . tui --ports 5432,6379 --interval 2s --docker
 
 # or build a binary with TUI enabled
-go build -tags tui -o portik ./cmd/portik
+go build -tags tui -o portik .
 ./portik tui --ports 5432,6379 --interval 2s --docker
 ```
 

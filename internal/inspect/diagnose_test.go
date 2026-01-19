@@ -3,7 +3,7 @@ package inspect
 import (
 	"testing"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 func TestDiagnoseIPv6Only(t *testing.T) {

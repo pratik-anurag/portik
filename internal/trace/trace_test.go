@@ -3,8 +3,8 @@ package trace
 import (
 	"testing"
 
-	"portik/internal/model"
-	"portik/internal/proctree"
+	"github.com/pratik-anurag/portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/proctree"
 )
 
 func TestStepsBasic(t *testing.T) {

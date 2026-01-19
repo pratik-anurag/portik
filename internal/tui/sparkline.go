@@ -1,12 +1,10 @@
-//go:build tui
-
 package tui
 
 import (
 	"fmt"
 	"time"
 
-	"portik/internal/history"
+	"github.com/pratik-anurag/portik/internal/history"
 )
 
 func sparkForPort(st *history.Store, port int, proto string, window time.Duration, buckets int) string {

@@ -1,11 +1,10 @@
 package cli
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
-	"portik/internal/model"
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 // extractConnectionsAny tries to read Report.Connections (slice) without depending on its element type.
@@ -169,6 +168,5 @@ func normalizeIP(s string) string {
 		return parts[0]
 	}
 	// raw ipv6 or ipv4
-	_ = fmt.Sprintf("") // keep fmt imported if you later extend
 	return s
 }
