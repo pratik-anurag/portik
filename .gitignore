@@ -1,5 +1,6 @@
 .DS_Store
 # Local built binaries
+bin/
 portik_*
 # ignore common binary extensions
 *.exe
