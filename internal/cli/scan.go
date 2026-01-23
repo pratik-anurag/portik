@@ -13,6 +13,7 @@ import (
 	"github.com/pratik-anurag/portik/internal/model"
 	"github.com/pratik-anurag/portik/internal/ports"
 	"github.com/pratik-anurag/portik/internal/render"
+	"github.com/pratik-anurag/portik/internal/sockets"
 )
 
 type scanRow struct {
@@ -36,14 +37,25 @@ func runScan(args []string) int {
 
 	var portsSpec string
 	var concurrency int
+	var all bool
+	var owner string
+	var minPort, maxPort int
 	fs.StringVar(&portsSpec, "ports", "", "ports spec: e.g. 5432,6379,3000-3010")
+	fs.BoolVar(&all, "all", false, "scan all listening ports on the system")
 	fs.IntVar(&concurrency, "concurrency", 0, "number of concurrent checks (default: CPU count, max 32)")
+	fs.StringVar(&owner, "owner", "", "filter by owner/process name")
+	fs.IntVar(&minPort, "min-port", 0, "minimum port in results (after discovery)")
+	fs.IntVar(&maxPort, "max-port", 65535, "maximum port in results (after discovery)")
 
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if portsSpec == "" {
-		fmt.Fprintln(os.Stderr, "scan: missing --ports (e.g. --ports 5432,6379,3000-3010)")
+	if portsSpec == "" && !all {
+		fmt.Fprintln(os.Stderr, "scan: missing --ports or --all (e.g. --ports 5432,6379,3000-3010 or --all)")
+		return 2
+	}
+	if portsSpec != "" && all {
+		fmt.Fprintln(os.Stderr, "scan: cannot use both --ports and --all")
 		return 2
 	}
 	if c.Proto != "tcp" && c.Proto != "udp" {
@@ -51,10 +63,37 @@ func runScan(args []string) int {
 		return 2
 	}
 
-	portsList, err := ports.ParseSpec(portsSpec)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "scan:", err)
-		return 2
+	var portsList []int
+	var err error
+
+	if all {
+		// Auto-discover all listening ports
+		portsList, err = getAllListeningPorts(c.Proto, minPort, maxPort)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "scan: failed to discover ports: %v\n", err)
+			return 2
+		}
+		if len(portsList) == 0 {
+			if c.JSON {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				_ = enc.Encode(map[string]any{
+					"proto": c.Proto,
+					"ports": []int{},
+					"rows":  []scanRow{},
+					"count": 0,
+				})
+			} else {
+				fmt.Printf("No %s listeners found in range %d-%d\n", c.Proto, minPort, maxPort)
+			}
+			return 0
+		}
+	} else {
+		portsList, err = ports.ParseSpec(portsSpec)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "scan:", err)
+			return 2
+		}
 	}
 
 	if concurrency <= 0 {
@@ -66,6 +105,17 @@ func runScan(args []string) int {
 
 	rows := scanPorts(portsList, c.Proto, c.Docker, concurrency)
 
+	// Apply owner filter if specified
+	if owner != "" {
+		var filtered []scanRow
+		for _, r := range rows {
+			if strings.Contains(strings.ToLower(r.Owner), strings.ToLower(owner)) {
+				filtered = append(filtered, r)
+			}
+		}
+		rows = filtered
+	}
+
 	if c.JSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -73,8 +123,19 @@ func runScan(args []string) int {
 			"proto": c.Proto,
 			"ports": portsList,
 			"rows":  rows,
+			"count": len(rows),
 		})
 		return 0
+	}
+
+	if all {
+		inUse := 0
+		for _, r := range rows {
+			if r.Status == "in-use" {
+				inUse++
+			}
+		}
+		fmt.Printf("%d ports in use (discovered via --all)\n\n", inUse)
 	}
 
 	fmt.Print(render.ScanTableRows(toRenderRows(rows)))
@@ -223,4 +284,39 @@ func toRenderRows(in []scanRow) render.ScanRows {
 		})
 	}
 	return out
+}
+
+// getAllListeningPorts discovers all listening ports via OS socket inspection
+// and optionally filters by minPort/maxPort range.
+func getAllListeningPorts(proto string, minPort, maxPort int) ([]int, error) {
+	listeners, err := sockets.ListListeners(proto)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract unique ports within range, avoiding duplicates
+	portMap := make(map[int]bool)
+	for _, l := range listeners {
+		p := l.LocalPort
+		if p >= minPort && p <= maxPort {
+			portMap[p] = true
+		}
+	}
+
+	// Convert to sorted slice
+	var result []int
+	for p := range portMap {
+		result = append(result, p)
+	}
+
+	// Simple sort
+	for i := 0; i < len(result); i++ {
+		for j := i + 1; j < len(result); j++ {
+			if result[j] < result[i] {
+				result[i], result[j] = result[j], result[i]
+			}
+		}
+	}
+
+	return result, nil
 }

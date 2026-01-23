@@ -8,12 +8,16 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pratik-anurag/portik/internal/model"
 )
 
 const maxEntriesPerPort = 200
+const lockTimeout = 7 * time.Second
+
+var fileLock = &sync.Mutex{}
 
 type Store struct {
 	Version int                         `json:"version"`
@@ -61,7 +65,40 @@ func historyPath() (string, error) {
 	return filepath.Join(home, ".portik", "history.json"), nil
 }
 
+// acquireLock attempts to acquire a lock on the history file
+// with timeout to prevent indefinite blocking
+func acquireLock() (func(), error) {
+	done := make(chan struct{})
+	var acquired bool
+
+	go func() {
+		fileLock.Lock()
+		acquired = true
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		// Lock acquired successfully
+		return func() {
+			fileLock.Unlock()
+		}, nil
+	case <-time.After(lockTimeout):
+		// Timeout waiting for lock - log warning but continue
+		return func() {
+			if acquired {
+				fileLock.Unlock()
+			}
+		}, fmt.Errorf("lock acquisition timeout (proceeding without lock)")
+	}
+}
+
 func Load() (*Store, error) {
+	unlock, err := acquireLock()
+	if err == nil {
+		defer unlock()
+	}
+
 	p, err := historyPath()
 	if err != nil {
 		return nil, err
@@ -84,6 +121,11 @@ func Load() (*Store, error) {
 }
 
 func Save(s *Store) error {
+	unlock, err := acquireLock()
+	if err == nil {
+		defer unlock()
+	}
+
 	p, err := historyPath()
 	if err != nil {
 		return err
@@ -99,10 +141,33 @@ func Save(s *Store) error {
 }
 
 func Record(rep model.Report) error {
-	s, err := Load()
+	// Acquire lock once for both load and save (atomic operation)
+	unlock, lockErr := acquireLock()
+	if lockErr == nil {
+		defer unlock()
+	}
+
+	// Load history file
+	p, err := historyPath()
 	if err != nil {
 		return err
 	}
+
+	var s *Store
+	b, err := os.ReadFile(p)
+	if errors.Is(err, os.ErrNotExist) {
+		s = &Store{Version: 1, Ports: map[string][]OwnershipEvent{}}
+	} else if err != nil {
+		return err
+	} else {
+		if err := json.Unmarshal(b, &s); err != nil {
+			return err
+		}
+		if s.Ports == nil {
+			s.Ports = map[string][]OwnershipEvent{}
+		}
+	}
+
 	key := fmt.Sprintf("%d/%s", rep.Port, rep.Proto)
 
 	ev := OwnershipEvent{
@@ -141,7 +206,16 @@ func Record(rep model.Report) error {
 	}
 
 	s.Ports[key] = events
-	return Save(s)
+
+	// Save history file
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(p, data, 0o644)
 }
 
 func (s *Store) ViewPortSince(port int, cutoff time.Time, detectPatterns bool) View {
