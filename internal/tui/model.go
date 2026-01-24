@@ -375,7 +375,7 @@ func (m modelTUI) runActionCmd(kind actionKind) tea.Cmd {
 					return actionDoneMsg{err: err}
 				}
 			}
-			res := sys.SmartRestart(l.PID, l.Cmdline, timeout)
+			res := sys.SmartRestart(l, timeout)
 			return actionDoneMsg{res: res}
 		default:
 			return actionDoneMsg{err: fmt.Errorf("unknown action")}

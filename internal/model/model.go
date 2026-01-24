@@ -38,10 +38,11 @@ type Listener struct {
 	State     string `json:"state"`  // LISTEN|BOUND
 	PID       int32  `json:"pid,omitempty"`
 
-	ProcName string `json:"proc_name,omitempty"`
-	Cmdline  string `json:"cmdline,omitempty"`
-	User     string `json:"user,omitempty"`
-	IsZombie bool   `json:"is_zombie,omitempty"`
+	ProcName   string `json:"proc_name,omitempty"`
+	Cmdline    string `json:"cmdline,omitempty"`
+	WorkingDir string `json:"working_dir,omitempty"`
+	User       string `json:"user,omitempty"`
+	IsZombie   bool   `json:"is_zombie,omitempty"`
 }
 
 type Conn struct {

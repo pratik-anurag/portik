@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/pratik-anurag/portik/internal/model"
@@ -46,14 +47,16 @@ func inspectLinux(port int, proto string, includeConnections bool) ([]model.List
 		state := strings.ToUpper(m[reSS.SubexpIndex("state")])
 		pid, pname := parseUsers(m[reSS.SubexpIndex("users")])
 		ip, p := splitHostPort(laddr)
+		cwd := getCwd(pid)
 
 		listeners = append(listeners, model.Listener{
-			LocalIP:   ip,
-			LocalPort: p,
-			Family:    familyFromIP(ip),
-			State:     state,
-			PID:       int32(pid),
-			ProcName:  pname,
+			LocalIP:    ip,
+			LocalPort:  p,
+			Family:     familyFromIP(ip),
+			State:      state,
+			PID:        int32(pid),
+			ProcName:   pname,
+			WorkingDir: cwd,
 		})
 	}
 
@@ -145,4 +148,16 @@ func familyFromIP(ip string) string {
 		return "unknown"
 	}
 	return "ipv4"
+}
+
+func getCwd(pid int) string {
+	// $ pwdx <pid>
+	//   <pid>: <path>
+	args := []string{strconv.Itoa(pid)}
+	out, err := exec.Command("pwdx", args...).Output()
+	if err != nil {
+		return ""
+	}
+	parts := strings.SplitN(string(out), ": ", 2)
+	return strings.TrimSpace(parts[1])
 }
