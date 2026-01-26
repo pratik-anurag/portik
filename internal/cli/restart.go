@@ -96,7 +96,7 @@ func runRestart(args []string) int {
 		}
 	}
 
-	res := sys.SmartRestart(target.PID, target.Cmdline, timeout)
+	res := sys.SmartRestart(target, timeout)
 	fmt.Print(render.ActionResult(res))
 	return res.ExitCode
 }

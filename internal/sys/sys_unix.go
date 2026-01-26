@@ -13,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/pratik-anurag/portik/internal/model"
 )
 
 type ActionResult struct {
@@ -61,8 +63,8 @@ func TerminateProcess(pid int32, timeout time.Duration) ActionResult {
 	return ActionResult{ExitCode: 0, Summary: "Process killed (SIGKILL after timeout)"}
 }
 
-func SmartRestart(pid int32, cmdline string, timeout time.Duration) ActionResult {
-	killRes := TerminateProcess(pid, timeout)
+func SmartRestart(l model.Listener, timeout time.Duration) ActionResult {
+	killRes := TerminateProcess(l.PID, timeout)
 	if killRes.ExitCode != 0 {
 		return ActionResult{ExitCode: 1, Summary: "Failed to stop process", Details: killRes.Summary + ": " + killRes.Details}
 	}
@@ -70,7 +72,8 @@ func SmartRestart(pid int32, cmdline string, timeout time.Duration) ActionResult
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-lc", cmdline)
+	cmd := exec.CommandContext(ctx, "sh", "-lc", l.Cmdline)
+	cmd.Dir = l.WorkingDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = nil

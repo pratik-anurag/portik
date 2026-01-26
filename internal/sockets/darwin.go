@@ -38,6 +38,7 @@ func inspectDarwin(port int, proto string, includeConnections bool) ([]model.Lis
 		if err != nil {
 			continue
 		}
+		cwd := getCwd(pid)
 		user := m[reLsof.SubexpIndex("user")]
 		addr := m[reLsof.SubexpIndex("addr")]
 		state := strings.ToUpper(strings.TrimSpace(m[reLsof.SubexpIndex("state")]))
@@ -47,13 +48,14 @@ func inspectDarwin(port int, proto string, includeConnections bool) ([]model.Lis
 
 		if state == "LISTEN" && p == port {
 			listeners = append(listeners, model.Listener{
-				LocalIP:   ip,
-				LocalPort: p,
-				Family:    fam,
-				State:     "LISTEN",
-				PID:       int32(pid),
-				ProcName:  cmd,
-				User:      user,
+				LocalIP:    ip,
+				LocalPort:  p,
+				Family:     fam,
+				State:      "LISTEN",
+				PID:        int32(pid),
+				ProcName:   cmd,
+				WorkingDir: cwd,
+				User:       user,
 			})
 		} else if includeConnections {
 			lip, lp, rip, rp := parseLsofConn(addr)
@@ -127,4 +129,21 @@ func familyFromIP(ip string) string {
 		return "unknown"
 	}
 	return "ipv4"
+}
+
+func getCwd(pid int) string {
+	// $ lsof -a -p <pid> -d cwd -Fn
+	//   p<pid>
+	//   fcwd
+	//   n<path>
+	args := []string{"-a", "-p", strconv.Itoa(pid), "-d", "cwd", "-Fn"}
+	out, err := exec.Command("lsof", args...).Output()
+	if err != nil {
+		return ""
+	}
+	lines := strings.Split(string(out), "\n")
+	if len(lines) < 3 || len(lines[2]) < 2 {
+		return ""
+	}
+	return strings.TrimSpace(lines[2][1:])
 }
