@@ -7,3 +7,4 @@ portik_*
 *.dll
 *.so
 *.dylib
+dist/

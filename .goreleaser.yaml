@@ -21,7 +21,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X github.com/pratik-anurag/portik/internal/cli.version={{ .Version }} -X github.com/pratik-anurag/portik/internal/cli.commit={{ .ShortCommit }}
+      - -s -w -X github.com/pratik-anurag/portik/internal/cli.version={{.Env.GORELEASER_CURRENT_TAG}} -X github.com/pratik-anurag/portik/internal/cli.commit={{ .ShortCommit }}
 
 archives:
   - formats:
