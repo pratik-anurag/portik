@@ -1,12 +1,10 @@
 package cli
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // These variables can be overridden at build time via -ldflags
 var (
-	version = defaultVersion
+	version = "dev"
 	commit  = ""
 )
 
