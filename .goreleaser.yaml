@@ -5,6 +5,7 @@ project_name: portik
 before:
   hooks:
     - go mod download
+    - sh -c 'export GORELEASER_CURRENT_TAG=$(cat VERSION) || echo "v0.0.0"'
 
 builds:
   - id: portik
@@ -21,7 +22,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X github.com/pratik-anurag/portik/internal/cli.version={{.Env.GORELEASER_CURRENT_TAG}} -X github.com/pratik-anurag/portik/internal/cli.commit={{ .ShortCommit }}
+      - -s -w -X github.com/pratik-anurag/portik/internal/cli.version={{.Tag}} -X github.com/pratik-anurag/portik/internal/cli.commit={{ .ShortCommit }}
 
 archives:
   - formats:
