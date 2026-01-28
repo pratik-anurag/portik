@@ -52,6 +52,8 @@ func Run(args []string) int {
 		return runTrace(args[1:])
 	case "lint":
 		return runLint(args[1:])
+	case "graph":
+		return runGraph(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", args[0])
 		printHelp()
@@ -84,6 +86,7 @@ Commands:
   top               Top ports by connection count
   wait              Wait until a port is listening or becomes free
   trace             Trace ownership and routing hints for a port
+  graph             Local dependency graph between processes
 
   version           Show version
 
