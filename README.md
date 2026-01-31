@@ -136,20 +136,6 @@ portik graph --dot                   # Graphviz DOT output
 portik graph --json                  # JSON output
 ```
 
-Sample output:
-
-```
-Local dependency graph (tcp)
-
-Listeners:
-  postgres   (pid 8123) LISTEN 127.0.0.1:5432
-  redis      (pid 9012) LISTEN 0.0.0.0:6379
-
-Dependencies:
-  api(pid 2210) -> postgres:5432   EST=8
-  worker(pid 2241) -> redis:6379   EST=1
-```
-
 ## Command Reference
 
 | Command | Description |
