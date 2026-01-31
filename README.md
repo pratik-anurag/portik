@@ -123,6 +123,31 @@ portik top --ports 3000-3010 --top 5     # Top ports by connection count
 portik blame 5432        # Process tree (who started this?)
 portik trace 5432        # Trace ownership/proxy layers
 portik conn 5432 --top 10   # Top clients to a port
+portik graph --top 20    # Local dependency graph between processes
+```
+
+### Graph (Local Dependencies)
+
+```bash
+portik graph                         # Default text output
+portik graph --ports 5432,6379       # Limit to specific ports
+portik graph --top 25                # Show top edges
+portik graph --dot                   # Graphviz DOT output
+portik graph --json                  # JSON output
+```
+
+Sample output:
+
+```
+Local dependency graph (tcp)
+
+Listeners:
+  postgres   (pid 8123) LISTEN 127.0.0.1:5432
+  redis      (pid 9012) LISTEN 0.0.0.0:6379
+
+Dependencies:
+  api(pid 2210) -> postgres:5432   EST=8
+  worker(pid 2241) -> redis:6379   EST=1
 ```
 
 ## Command Reference
@@ -144,6 +169,7 @@ portik conn 5432 --top 10   # Top clients to a port
 | `reserve` | Reserve a port temporarily |
 | `use` | Run command on a free port |
 | `conn` | Show connections to a port |
+| `graph` | Local dependency graph between processes |
 | `wait` | Wait for port to become listening/free |
 | `lint` | Lint current listeners for issues |
 | `tui` | Interactive port management (optional) |

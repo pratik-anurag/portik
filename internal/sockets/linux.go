@@ -6,19 +6,10 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/pratik-anurag/portik/internal/model"
-)
-
-// ss -H -ltnp 'sport = :5432'
-// LISTEN 0 4096 127.0.0.1:5432 0.0.0.0:* users:(("postgres",pid=8123,fd=7))
-var (
-	reSS        = regexp.MustCompile(`^(?P<state>\S+)\s+\d+\s+\d+\s+(?P<laddr>\S+)\s+(?P<raddr>\S+)\s*(?P<users>users:\(\(.*\)\))?$`)
-	reUsersPid  = regexp.MustCompile(`pid=(\d+)`)
-	reUsersProc = regexp.MustCompile(`\(\("([^"]+)"`)
 )
 
 func inspectLinux(port int, proto string, includeConnections bool) ([]model.Listener, []model.Conn, error) {
@@ -35,27 +26,20 @@ func inspectLinux(port int, proto string, includeConnections bool) ([]model.List
 
 	out, _ := exec.Command("ss", ssArgs...).Output()
 	for _, line := range splitLines(out) {
-		line = strings.TrimSpace(line)
-		if line == "" {
+		parsed, ok := parseSSLine(line)
+		if !ok {
 			continue
 		}
-		m := reSS.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
-		laddr := m[reSS.SubexpIndex("laddr")]
-		state := strings.ToUpper(m[reSS.SubexpIndex("state")])
-		pid, pname := parseUsers(m[reSS.SubexpIndex("users")])
-		ip, p := splitHostPort(laddr)
-		cwd := getCwd(pid)
+		ip, p := splitHostPort(parsed.laddr)
+		cwd := getCwd(parsed.pid)
 
 		listeners = append(listeners, model.Listener{
 			LocalIP:    ip,
 			LocalPort:  p,
 			Family:     familyFromIP(ip),
-			State:      state,
-			PID:        int32(pid),
-			ProcName:   pname,
+			State:      parsed.state,
+			PID:        int32(parsed.pid),
+			ProcName:   parsed.proc,
 			WorkingDir: cwd,
 		})
 	}
@@ -64,20 +48,12 @@ func inspectLinux(port int, proto string, includeConnections bool) ([]model.List
 		args := []string{"-H", "-tanp", fmt.Sprintf("( sport = :%d or dport = :%d )", port, port)}
 		out2, _ := exec.Command("ss", args...).Output()
 		for _, line := range splitLines(out2) {
-			line = strings.TrimSpace(line)
-			if line == "" {
+			parsed, ok := parseSSLine(line)
+			if !ok {
 				continue
 			}
-			m := reSS.FindStringSubmatch(line)
-			if m == nil {
-				continue
-			}
-			state := strings.ToUpper(m[reSS.SubexpIndex("state")])
-			laddr := m[reSS.SubexpIndex("laddr")]
-			raddr := m[reSS.SubexpIndex("raddr")]
-			pid, pname := parseUsers(m[reSS.SubexpIndex("users")])
-			lip, lp := splitHostPort(laddr)
-			rip, rp := splitHostPort(raddr)
+			lip, lp := splitHostPort(parsed.laddr)
+			rip, rp := splitHostPort(parsed.raddr)
 
 			conns = append(conns, model.Conn{
 				LocalIP:    lip,
@@ -85,9 +61,9 @@ func inspectLinux(port int, proto string, includeConnections bool) ([]model.List
 				RemoteIP:   rip,
 				RemotePort: rp,
 				Family:     familyFromIP(lip),
-				State:      state,
-				PID:        int32(pid),
-				ProcName:   pname,
+				State:      parsed.state,
+				PID:        int32(parsed.pid),
+				ProcName:   parsed.proc,
 			})
 		}
 	}
@@ -101,19 +77,6 @@ func splitLines(b []byte) []string {
 		return nil
 	}
 	return strings.Split(s, "\n")
-}
-
-func parseUsers(users string) (pid int, proc string) {
-	if users == "" {
-		return 0, ""
-	}
-	if m := reUsersPid.FindStringSubmatch(users); m != nil {
-		pid = parseInt(m[1])
-	}
-	if m := reUsersProc.FindStringSubmatch(users); m != nil {
-		proc = m[1]
-	}
-	return
 }
 
 func splitHostPort(addr string) (string, int) {
