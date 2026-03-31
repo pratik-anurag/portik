@@ -42,7 +42,7 @@ func runDaemon(args []string) int {
 		return 2
 	}
 
-	fmt.Fprintf(os.Stderr, "portik daemon: monitoring %d ports every %s (history at ~/.portik/history.json)\n", len(ports), interval)
+	fmt.Fprintf(os.Stderr, "portik daemon: monitoring %d ports every %s (history at ~/.portik/history.db)\n", len(ports), interval)
 
 	type last struct{ sig string }
 	lastByPort := map[int]last{}

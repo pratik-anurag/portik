@@ -213,13 +213,13 @@ Socket-to-PID resolution is restricted without elevated privileges on macOS and 
 Yes, use `--docker` flag. It shows host-to-container mappings and container names.
 
 **What if I need to track history?**  
-History is stored at `~/.portik/history.json`. Use `portik history` to view it. History is safely managed:
+History is stored in a local SQLite database at `~/.portik/history.db`. Use `portik history` to view it. Legacy `~/.portik/history.json` data is imported automatically on first run. History is safely managed:
 - Up to 200 entries per port (oldest discarded when limit reached)
 - Safe concurrent writes if multiple portik daemons/watches are running
 - Deduplicates consecutive identical states to reduce file growth
 
 **Can I run multiple portik daemons simultaneously?**  
-Yes, they're safe to run concurrently. History writes are serialized with a mutex to prevent corruption.
+Yes, they're safe to run concurrently. History writes are serialized by SQLite transactions to prevent corruption.
 
 **Is it safe to use kill/restart?**  
 Yes. Both commands are conservative by default:
@@ -240,20 +240,19 @@ Destructive actions (kill, restart, TUI actions) are conservative by default:
 - Port inspection is OS-specific (Linux: `ss`, macOS: `lsof`; results normalized)
 - Process metadata enriched via `ps` parsing
 - Diagnostics are heuristic to guide debugging, not replace system analysis
-- History writes are serialized with a mutex to ensure concurrent safety across multiple processes
+- History writes are serialized with SQLite transactions to ensure concurrent safety across multiple processes
 
 **History Management:**
 - Per-port limit: 200 entries (oldest discarded when exceeded)
 - Consecutive identical states are deduplicated to reduce file growth
 - Multiple daemons/watches can run concurrently without corruption
-- Lock timeout: 7 seconds (falls back gracefully if timeout exceeded)
-- File location: `~/.portik/history.json`
+- File location: `~/.portik/history.db`
+- Legacy `~/.portik/history.json` files are imported automatically on first run
 
 **Limitations:**
 - Socket → PID resolution requires elevated privileges in some cases
 - Docker mapping relies on local `docker` CLI; not exhaustive for all runtimes
 - `restart` relies on recorded command history; may not reproduce complex environments
-- History stored in single JSON file; very large histories may be slow to query
 - Global per-port limit (200 entries) may be insufficient for long-running monitoring
 
 ## Contributing
