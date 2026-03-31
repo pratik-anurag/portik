@@ -1,6 +1,8 @@
 package history
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,16 +10,22 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
+
+	_ "modernc.org/sqlite"
 
 	"github.com/pratik-anurag/portik/internal/model"
 )
 
-const maxEntriesPerPort = 200
-const lockTimeout = 7 * time.Second
-
-var fileLock = &sync.Mutex{}
+const (
+	maxEntriesPerPort     = 200
+	historyStoreVersion   = 2
+	historyDBFilename     = "history.db"
+	legacyHistoryFilename = "history.json"
+	historyDBEnv          = "PORTIK_HISTORY_DB"
+	legacyHistoryJSONEnv  = "PORTIK_HISTORY_JSON"
+	sqliteBusyTimeoutMS   = 5000
+)
 
 type Store struct {
 	Version int                         `json:"version"`
@@ -57,165 +65,86 @@ type TopOwner struct {
 	Count int    `json:"count"`
 }
 
-func historyPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".portik", "history.json"), nil
-}
-
-// acquireLock attempts to acquire a lock on the history file
-// with timeout to prevent indefinite blocking
-func acquireLock() (func(), error) {
-	done := make(chan struct{})
-	var acquired bool
-
-	go func() {
-		fileLock.Lock()
-		acquired = true
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		// Lock acquired successfully
-		return func() {
-			fileLock.Unlock()
-		}, nil
-	case <-time.After(lockTimeout):
-		// Timeout waiting for lock - log warning but continue
-		return func() {
-			if acquired {
-				fileLock.Unlock()
-			}
-		}, fmt.Errorf("lock acquisition timeout (proceeding without lock)")
-	}
-}
-
 func Load() (*Store, error) {
-	unlock, err := acquireLock()
-	if err == nil {
-		defer unlock()
+	db, err := openDB()
+	if err != nil {
+		return nil, err
 	}
+	defer db.Close()
 
-	p, err := historyPath()
-	if err != nil {
-		return nil, err
-	}
-	b, err := os.ReadFile(p)
-	if errors.Is(err, os.ErrNotExist) {
-		return &Store{Version: 1, Ports: map[string][]OwnershipEvent{}}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	var s Store
-	if err := json.Unmarshal(b, &s); err != nil {
-		return nil, err
-	}
-	if s.Ports == nil {
-		s.Ports = map[string][]OwnershipEvent{}
-	}
-	return &s, nil
+	return loadFromDB(context.Background(), db)
 }
 
 func Save(s *Store) error {
-	unlock, err := acquireLock()
-	if err == nil {
-		defer unlock()
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	if s == nil {
+		s = &Store{Version: historyStoreVersion, Ports: map[string][]OwnershipEvent{}}
 	}
 
-	p, err := historyPath()
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		return err
-	}
-	b, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(p, b, 0o644)
+	return withImmediateTx(context.Background(), db, func(conn *sql.Conn) error {
+		if _, err := conn.ExecContext(context.Background(), `DELETE FROM ownership_events`); err != nil {
+			return err
+		}
+
+		keys := make([]string, 0, len(s.Ports))
+		for key := range s.Ports {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			events := s.Ports[key]
+			for _, ev := range events {
+				if err := insertEvent(context.Background(), conn, ev); err != nil {
+					return err
+				}
+			}
+			if len(events) > 0 {
+				if err := prunePortHistory(context.Background(), conn, events[0].Port, events[0].Proto); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func Record(rep model.Report) error {
-	// Acquire lock once for both load and save (atomic operation)
-	unlock, lockErr := acquireLock()
-	if lockErr == nil {
-		defer unlock()
-	}
-
-	// Load history file
-	p, err := historyPath()
+	db, err := openDB()
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
-	var s *Store
-	b, err := os.ReadFile(p)
-	if errors.Is(err, os.ErrNotExist) {
-		s = &Store{Version: 1, Ports: map[string][]OwnershipEvent{}}
-	} else if err != nil {
-		return err
-	} else {
-		if err := json.Unmarshal(b, &s); err != nil {
+	ev := eventFromReport(rep)
+	ctx := context.Background()
+
+	return withImmediateTx(ctx, db, func(conn *sql.Conn) error {
+		var lastSig string
+		err := conn.QueryRowContext(ctx, `
+			SELECT signature
+			FROM ownership_events
+			WHERE port = ? AND proto = ?
+			ORDER BY at_unix_ns DESC, id DESC
+			LIMIT 1
+		`, ev.Port, ev.Proto).Scan(&lastSig)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}
-		if s.Ports == nil {
-			s.Ports = map[string][]OwnershipEvent{}
+		if err == nil && lastSig == ev.Signature {
+			return nil
 		}
-	}
 
-	key := fmt.Sprintf("%d/%s", rep.Port, rep.Proto)
-
-	ev := OwnershipEvent{
-		At:        rep.Generated,
-		Port:      rep.Port,
-		Proto:     rep.Proto,
-		Signature: rep.Signature(),
-	}
-
-	if l, ok := rep.PrimaryListener(); ok {
-		ev.PID = l.PID
-		ev.ProcName = l.ProcName
-		ev.Cmdline = l.Cmdline
-		ev.User = l.User
-	}
-
-	if rep.Docker.Mapped {
-		ev.DockerMapped = true
-		ev.ContainerID = rep.Docker.ContainerID
-		ev.ContainerName = rep.Docker.ContainerName
-		ev.ComposeService = rep.Docker.ComposeService
-	}
-
-	events := append(s.Ports[key], ev)
-
-	// Dedup consecutive identical signatures
-	if len(events) >= 2 {
-		last := events[len(events)-1]
-		prev := events[len(events)-2]
-		if last.Signature == prev.Signature {
-			events = events[:len(events)-1]
+		if err := insertEvent(ctx, conn, ev); err != nil {
+			return err
 		}
-	}
-	if len(events) > maxEntriesPerPort {
-		events = events[len(events)-maxEntriesPerPort:]
-	}
-
-	s.Ports[key] = events
-
-	// Save history file
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(p, data, 0o644)
+		return prunePortHistory(ctx, conn, ev.Port, ev.Proto)
+	})
 }
 
 func (s *Store) ViewPortSince(port int, cutoff time.Time, detectPatterns bool) View {
@@ -267,9 +196,9 @@ func (s *Store) RecentOwners(port int, proto string, n int) []OwnershipEvent {
 
 func DetectPatterns(events []OwnershipEvent) []Pattern {
 	// Simple heuristics:
-	// - if most events cluster around an hour-of-day → "morning pattern around 09:00"
-	// - if most events cluster on a weekday → "often on Mondays"
-	// - if a specific owner dominates that hour → "postgres takes it around 09:00"
+	// - if most events cluster around an hour-of-day -> "morning pattern around 09:00"
+	// - if most events cluster on a weekday -> "often on Mondays"
+	// - if a specific owner dominates that hour -> "postgres takes it around 09:00"
 	if len(events) < 5 {
 		return nil
 	}
@@ -439,4 +368,309 @@ func RenderView(v View) string {
 		}
 	}
 	return b.String()
+}
+
+func openDB() (*sql.DB, error) {
+	p, err := dbPath()
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return nil, err
+	}
+
+	db, err := sql.Open("sqlite", p)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+
+	if _, err := db.Exec(fmt.Sprintf(`PRAGMA busy_timeout = %d`, sqliteBusyTimeoutMS)); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if _, err := db.Exec(`PRAGMA journal_mode = WAL`); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if _, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS ownership_events (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			port INTEGER NOT NULL,
+			proto TEXT NOT NULL,
+			at_unix_ns INTEGER NOT NULL,
+			pid INTEGER NOT NULL DEFAULT 0,
+			proc_name TEXT NOT NULL DEFAULT '',
+			cmdline TEXT NOT NULL DEFAULT '',
+			user_name TEXT NOT NULL DEFAULT '',
+			docker_mapped INTEGER NOT NULL DEFAULT 0,
+			container_id TEXT NOT NULL DEFAULT '',
+			container_name TEXT NOT NULL DEFAULT '',
+			compose_service TEXT NOT NULL DEFAULT '',
+			signature TEXT NOT NULL
+		)
+	`); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if _, err := db.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_ownership_events_port_proto_time
+		ON ownership_events (port, proto, at_unix_ns DESC, id DESC)
+	`); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := migrateLegacyJSON(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return db, nil
+}
+
+func dbPath() (string, error) {
+	if p := strings.TrimSpace(os.Getenv(historyDBEnv)); p != "" {
+		return p, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".portik", historyDBFilename), nil
+}
+
+func legacyJSONPath() (string, error) {
+	if p := strings.TrimSpace(os.Getenv(legacyHistoryJSONEnv)); p != "" {
+		return p, nil
+	}
+	p, err := dbPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(p), legacyHistoryFilename), nil
+}
+
+func loadFromDB(ctx context.Context, db *sql.DB) (*Store, error) {
+	rows, err := db.QueryContext(ctx, `
+		SELECT port, proto, at_unix_ns, pid, proc_name, cmdline, user_name,
+		       docker_mapped, container_id, container_name, compose_service, signature
+		FROM ownership_events
+		ORDER BY port ASC, proto ASC, at_unix_ns ASC, id ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	store := &Store{
+		Version: historyStoreVersion,
+		Ports:   map[string][]OwnershipEvent{},
+	}
+
+	for rows.Next() {
+		ev, err := scanOwnershipEvent(rows)
+		if err != nil {
+			return nil, err
+		}
+		key := fmt.Sprintf("%d/%s", ev.Port, ev.Proto)
+		store.Ports[key] = append(store.Ports[key], ev)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return store, nil
+}
+
+func scanOwnershipEvent(scanner interface {
+	Scan(dest ...any) error
+}) (OwnershipEvent, error) {
+	var ev OwnershipEvent
+	var atUnixNS int64
+	var pid int64
+	var dockerMapped int64
+	if err := scanner.Scan(
+		&ev.Port,
+		&ev.Proto,
+		&atUnixNS,
+		&pid,
+		&ev.ProcName,
+		&ev.Cmdline,
+		&ev.User,
+		&dockerMapped,
+		&ev.ContainerID,
+		&ev.ContainerName,
+		&ev.ComposeService,
+		&ev.Signature,
+	); err != nil {
+		return OwnershipEvent{}, err
+	}
+	ev.At = timeFromUnixNS(atUnixNS)
+	ev.PID = int32(pid)
+	ev.DockerMapped = dockerMapped != 0
+	return ev, nil
+}
+
+func timeFromUnixNS(ns int64) time.Time {
+	if ns == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, ns).In(time.Local)
+}
+
+func eventFromReport(rep model.Report) OwnershipEvent {
+	ev := OwnershipEvent{
+		At:        rep.Generated,
+		Port:      rep.Port,
+		Proto:     rep.Proto,
+		Signature: rep.Signature(),
+	}
+
+	if l, ok := rep.PrimaryListener(); ok {
+		ev.PID = l.PID
+		ev.ProcName = l.ProcName
+		ev.Cmdline = l.Cmdline
+		ev.User = l.User
+	}
+
+	if rep.Docker.Mapped {
+		ev.DockerMapped = true
+		ev.ContainerID = rep.Docker.ContainerID
+		ev.ContainerName = rep.Docker.ContainerName
+		ev.ComposeService = rep.Docker.ComposeService
+	}
+
+	return ev
+}
+
+func insertEvent(ctx context.Context, conn *sql.Conn, ev OwnershipEvent) error {
+	_, err := conn.ExecContext(ctx, `
+		INSERT INTO ownership_events (
+			port, proto, at_unix_ns, pid, proc_name, cmdline, user_name,
+			docker_mapped, container_id, container_name, compose_service, signature
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`,
+		ev.Port,
+		ev.Proto,
+		unixNS(ev.At),
+		ev.PID,
+		ev.ProcName,
+		ev.Cmdline,
+		ev.User,
+		boolToInt(ev.DockerMapped),
+		ev.ContainerID,
+		ev.ContainerName,
+		ev.ComposeService,
+		ev.Signature,
+	)
+	return err
+}
+
+func unixNS(t time.Time) int64 {
+	if t.IsZero() {
+		return 0
+	}
+	return t.UnixNano()
+}
+
+func prunePortHistory(ctx context.Context, conn *sql.Conn, port int, proto string) error {
+	_, err := conn.ExecContext(ctx, `
+		DELETE FROM ownership_events
+		WHERE id IN (
+			SELECT id
+			FROM ownership_events
+			WHERE port = ? AND proto = ?
+			ORDER BY at_unix_ns DESC, id DESC
+			LIMIT -1 OFFSET ?
+		)
+	`, port, proto, maxEntriesPerPort)
+	return err
+}
+
+func boolToInt(v bool) int {
+	if v {
+		return 1
+	}
+	return 0
+}
+
+func withImmediateTx(ctx context.Context, db *sql.DB, fn func(conn *sql.Conn) error) error {
+	conn, err := db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if _, err := conn.ExecContext(ctx, `BEGIN IMMEDIATE`); err != nil {
+		return err
+	}
+
+	committed := false
+	defer func() {
+		if committed {
+			return
+		}
+		_, _ = conn.ExecContext(ctx, `ROLLBACK`)
+	}()
+
+	if err := fn(conn); err != nil {
+		return err
+	}
+	if _, err := conn.ExecContext(ctx, `COMMIT`); err != nil {
+		return err
+	}
+	committed = true
+	return nil
+}
+
+func migrateLegacyJSON(db *sql.DB) error {
+	ctx := context.Background()
+	return withImmediateTx(ctx, db, func(conn *sql.Conn) error {
+		var existing int
+		if err := conn.QueryRowContext(ctx, `SELECT COUNT(1) FROM ownership_events`).Scan(&existing); err != nil {
+			return err
+		}
+		if existing > 0 {
+			return nil
+		}
+
+		p, err := legacyJSONPath()
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(p)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		var legacy Store
+		if err := json.Unmarshal(data, &legacy); err != nil {
+			return fmt.Errorf("load legacy history JSON %q: %w", p, err)
+		}
+		if len(legacy.Ports) == 0 {
+			return nil
+		}
+
+		keys := make([]string, 0, len(legacy.Ports))
+		for key := range legacy.Ports {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			events := legacy.Ports[key]
+			for _, ev := range events {
+				if err := insertEvent(ctx, conn, ev); err != nil {
+					return err
+				}
+			}
+			if len(events) > 0 {
+				if err := prunePortHistory(ctx, conn, events[0].Port, events[0].Proto); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
